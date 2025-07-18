@@ -1,0 +1,79 @@
+{
+    "name": "Mission",
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "description": "Mission title"
+      },
+      "description": {
+        "type": "string",
+        "description": "Mission description"
+      },
+      "target": {
+        "type": "string",
+        "description": "Target celestial body"
+      },
+      "objective": {
+        "type": "string",
+        "enum": [
+          "orbit",
+          "landing",
+          "flyby",
+          "sample_collection",
+          "deep_space"
+        ],
+        "description": "Mission objective type"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "available",
+          "active",
+          "completed",
+          "failed"
+        ],
+        "default": "available"
+      },
+      "difficulty": {
+        "type": "string",
+        "enum": [
+          "easy",
+          "medium",
+          "hard",
+          "extreme"
+        ],
+        "default": "easy"
+      },
+      "reward_points": {
+        "type": "number",
+        "description": "Points awarded for completion"
+      },
+      "time_limit": {
+        "type": "number",
+        "description": "Time limit in hours"
+      },
+      "requirements": {
+        "type": "object",
+        "properties": {
+          "min_fuel": {
+            "type": "number"
+          },
+          "min_oxygen": {
+            "type": "number"
+          },
+          "min_power": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "required": [
+      "title",
+      "description",
+      "target",
+      "objective",
+      "difficulty",
+      "reward_points"
+    ]
+}

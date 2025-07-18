@@ -1,0 +1,89 @@
+{
+    "name": "Spacecraft",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name of the spacecraft"
+      },
+      "position": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "z": {
+            "type": "number"
+          }
+        },
+        "description": "Position in 3D space (AU units)"
+      },
+      "velocity": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "z": {
+            "type": "number"
+          }
+        },
+        "description": "Velocity vector (km/s)"
+      },
+      "fuel": {
+        "type": "number",
+        "description": "Fuel remaining (kg)"
+      },
+      "max_fuel": {
+        "type": "number",
+        "description": "Maximum fuel capacity (kg)"
+      },
+      "oxygen": {
+        "type": "number",
+        "description": "Oxygen remaining (hours)"
+      },
+      "power": {
+        "type": "number",
+        "description": "Power remaining (kWh)"
+      },
+      "thrust": {
+        "type": "number",
+        "description": "Thrust power (N)"
+      },
+      "mass": {
+        "type": "number",
+        "description": "Total mass (kg)"
+      },
+      "target_body": {
+        "type": "string",
+        "description": "Current target celestial body"
+      },
+      "mission_status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "docked",
+          "crashed",
+          "lost"
+        ],
+        "default": "active"
+      }
+    },
+    "required": [
+      "name",
+      "position",
+      "velocity",
+      "fuel",
+      "max_fuel",
+      "oxygen",
+      "power",
+      "thrust",
+      "mass"
+    ]
+}
