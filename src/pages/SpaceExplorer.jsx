@@ -75,7 +75,7 @@ export default function SpaceExplorer() {
       } else {
         // Create new spacecraft if none exists or if restarting
         const newSpacecraft = await Spacecraft.create({
-          name: "Explorer-1",
+          name: "Imboni-1",
           position: { x: 1.0, y: 0, z: 0 }, // Start at Earth's orbit
           velocity: { x: 0, y: 0, z: 0 },
           fuel: 10000,
@@ -85,7 +85,11 @@ export default function SpaceExplorer() {
           thrust: 50000,
           mass: 5000,
           target_body: "",
-          mission_status: "active"
+          mission_status: "active",
+          orientation: { pitch: 0, yaw: 0, roll: 0 },
+          thrust_vector: { x: 0, y: 0, z: 0 },
+          thrust_level: 0,
+          autopilot: false
         });
         setSpacecraft(newSpacecraft);
       }
@@ -95,6 +99,12 @@ export default function SpaceExplorer() {
       console.error('Error initializing game:', error);
       setIsLoading(false);
     }
+  };
+
+  const handleThrustApply = (thrustVector) => {
+    // This is now handled directly in the ControlPanel component
+    // using the Spacecraft.applyThrust method
+    console.log('Thrust vector received:', thrustVector);
   };
 
   const handleRestart = () => {
@@ -141,10 +151,7 @@ export default function SpaceExplorer() {
     }
   };
 
-  const handleThrustApply = (thrustVector) => {
-    // Thrust application is handled in ControlPanel
-    console.log('Thrust applied:', thrustVector);
-  };
+  
 
   if (isLoading) {
     return (
@@ -185,66 +192,57 @@ export default function SpaceExplorer() {
         targetBody={spacecraft.target_body}
         isPaused={isPaused || !!gameOverReason} // Pause game if game over
         timeScale={timeScale}
+        className="absolute inset-0 z-0"
       />
 
       {/* Game UI Overlay */}
-      <SpacecraftHUD
-        spacecraft={spacecraft}
-        currentMission={currentMission}
-        gameTime={gameTime}
-      />
-
-      {/* Control Panel or Toggle Button */}
-      {showControls && !gameOverReason ? ( // Hide controls if game over
-        <ControlPanel
+      <div className="absolute inset-0 z-1 pointer-events-none">
+        <SpacecraftHUD
           spacecraft={spacecraft}
-          onSpacecraftUpdate={handleSpacecraftUpdate}
-          isPaused={isPaused}
-          setIsPaused={setIsPaused}
-          timeScale={timeScale}
-          setTimeScale={setTimeScale}
-          onTargetChange={handleTargetChange}
-          onThrustApply={handleThrustApply}
-          setShowControls={setShowControls} // Pass setter to allow ControlPanel to hide itself
-        />
-      ) : (
-        !gameOverReason && ( // Only show toggle button if not game over
-          <div className="absolute top-4 right-4 z-10">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setShowControls(true)}
-              className="bg-gray-900/90 border-gray-700 text-white hover:bg-gray-800/90 backdrop-blur-sm"
-              title="Show Controls"
-            >
-              <PanelRightOpen className="w-5 h-5" />
-            </Button>
-          </div>
-        )
-      )}
-
-      {!gameOverReason && ( // Hide mission panel if game over
-        <MissionPanel
-          onMissionSelect={handleMissionSelect}
           currentMission={currentMission}
-          spacecraft={spacecraft}
+          gameTime={gameTime}
+          className="pointer-events-auto"
         />
-      )}
 
-      {/* Emergency Warning - Hide if game over is already displayed */}
-      {(spacecraft.fuel < 1000 || spacecraft.oxygen < 5 || spacecraft.power < 100) && !gameOverReason && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-          <div className="bg-red-900/90 border-2 border-red-500 rounded-lg p-6 text-white text-center animate-pulse">
-            <div className="text-2xl font-bold mb-2">⚠️ CRITICAL WARNING ⚠️</div>
-            <div className="text-lg">
-              {spacecraft.fuel < 1000 && <div>LOW FUEL: {spacecraft.fuel.toFixed(0)}kg remaining</div>}
-              {spacecraft.oxygen < 5 && <div>LOW OXYGEN: {spacecraft.oxygen.toFixed(1)}h remaining</div>}
-              {spacecraft.power < 100 && <div>LOW POWER: {spacecraft.power.toFixed(0)}kWh remaining</div>}
-            </div>
-            <div className="mt-4 text-sm">Return to Earth immediately!</div>
+        {/* Control Panel or Toggle Button */}
+        {showControls && !gameOverReason ? ( // Hide controls if game over
+          <div className="pointer-events-auto">
+            <ControlPanel
+              spacecraft={spacecraft}
+              onSpacecraftUpdate={handleSpacecraftUpdate}
+              isPaused={isPaused}
+              setIsPaused={setIsPaused}
+              timeScale={timeScale}
+              setTimeScale={setTimeScale}
+              onTargetChange={handleTargetChange}
+              onThrustApply={handleThrustApply}
+              setShowControls={setShowControls} // Pass setter to allow ControlPanel to hide itself
+            />
           </div>
+        ) : (
+          !gameOverReason && ( // Only show toggle button if not game over
+            <div className="absolute top-4 right-4 z-10 pointer-events-auto">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowControls(true)}
+                className="bg-gray-900/60 border-gray-700/50 text-gray-300 hover:text-white backdrop-blur-md"
+              >
+                <PanelRightOpen className="w-5 h-5" />
+              </Button>
+            </div>
+          )
+        )}
+
+        {/* Mission Panel */}
+        <div className="pointer-events-auto">
+          <MissionPanel
+            onMissionSelect={handleMissionSelect}
+            currentMission={currentMission}
+            spacecraft={spacecraft}
+          />
         </div>
-      )}
+      </div>
     </div>
   );
 }

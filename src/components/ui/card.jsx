@@ -1,11 +1,11 @@
 import React from 'react';
-import clsx from 'clsx'; // Optional utility, remove if not using Tailwind + clsx
+import clsx from 'clsx';
 
 export function Card({ className, children }) {
   return (
     <div
       className={clsx(
-        'rounded-2xl border bg-white dark:bg-gray-900 shadow-lg p-4',
+        'rounded-xl border border-gray-800/50 bg-gray-900/70 shadow-lg backdrop-blur-md p-4',
         className
       )}
     >
@@ -16,7 +16,7 @@ export function Card({ className, children }) {
 
 export function CardHeader({ className, children }) {
   return (
-    <div className={clsx('mb-4', className)}>
+    <div className={clsx('mb-3', className)}>
       {children}
     </div>
   );
@@ -24,7 +24,7 @@ export function CardHeader({ className, children }) {
 
 export function CardTitle({ className, children }) {
   return (
-    <h2 className={clsx('text-2xl font-bold text-gray-900 dark:text-white', className)}>
+    <h2 className={clsx('text-xl font-semibold text-white', className)}>
       {children}
     </h2>
   );
@@ -32,7 +32,7 @@ export function CardTitle({ className, children }) {
 
 export function CardContent({ className, children }) {
   return (
-    <div className={clsx('text-gray-700 dark:text-gray-300', className)}>
+    <div className={clsx('text-gray-200', className)}>
       {children}
     </div>
   );
@@ -40,7 +40,7 @@ export function CardContent({ className, children }) {
 
 export function CardFooter({ className, children }) {
   return (
-    <div className={clsx('mt-4 pt-4 border-t dark:border-gray-700', className)}>
+    <div className={clsx('mt-4 pt-3 border-t border-gray-700/50', className)}>
       {children}
     </div>
   );
