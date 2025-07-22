@@ -52,6 +52,23 @@ export default function ControlPanel({
     }
   }, [spacecraft]); // Only run when spacecraft changes, not on every render
 
+  // Effect for handling keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.code === 'Space') {
+        event.preventDefault(); // Prevent default spacebar action (e.g., scrolling)
+        setIsPaused(prev => !prev);
+        addLogEntry('Time Control', { action: isPaused ? 'Resume' : 'Pause' });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isPaused, setIsPaused]); // Re-run effect if isPaused or setIsPaused changes
+
   // Add to flight log
   const addLogEntry = (action, details) => {
     const timestamp = new Date().toISOString();

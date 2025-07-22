@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Sun, Globe, Moon, Sprout, Milestone } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createPageUrl } from '@/utils/router';
 
 const CELESTIAL_BODIES = {
   sun: { name: 'Sun', radius: 695510, mass: "1.989 × 10^30 kg", type: 'star', temp: '5,505 °C', description: 'The star at the center of the Solar System. It is a nearly perfect sphere of hot plasma, heated to incandescence by nuclear fusion reactions in its core.', icon: Sun },

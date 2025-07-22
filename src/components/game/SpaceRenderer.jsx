@@ -1,9 +1,19 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { Spacecraft } from '@/entities/SpaceCraft';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { Spacecraft } from '../../entities/SpaceCraft';
 import { CELESTIAL_BODIES } from '@/entities/CelestialBodies';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import * as THREE from 'three';
 import { TextureLoader } from 'three';
+import { updateSpacecraftModels } from '../../entities/Spacecrafts';
+import Label from './Label';
+import { setupScene } from './sceneSetup';
+import { setupLighting } from './lightingSetup';
+import { setupStarfield } from './starfieldSetup';
+import { setupCelestialBodies } from './celestialBodySetup';
+import { setupSpacecraft } from './spacecraftSetup';
+import { setupEventHandlers } from './eventHandlers';
+import { setupKeyboardControls } from './keyboardControls';
+
+
 
 export default function SpaceRenderer({ 
   spacecraft, 
@@ -12,6 +22,7 @@ export default function SpaceRenderer({
   isPaused,
   timeScale 
 }) {
+  // Existing refs and state
   const mountRef = useRef();
   const sceneRef = useRef();
   const spacecraftRef = useRef();
@@ -27,463 +38,45 @@ export default function SpaceRenderer({
   const cloudsRefs = useRef({});
   const atmosphereRefs = useRef({});
   const orbitRefs = useRef({});
-  const infoLabels = useRef({});
+  const [labelData, setLabelData] = useState({});
   const [selectedBody, setSelectedBody] = useState(null);
   const [showOrbits, setShowOrbits] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
   const [realScale, setRealScale] = useState(false);
+  const [textureLoadStatus, setTextureLoadStatus] = useState({});
 
   useEffect(() => {
     if (!mountRef.current) return;
 
-    // Scene setup
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000005); // Darker background for better contrast
-    sceneRef.current = scene;
-
-    // Camera setup with improved parameters for space viewing
-    const camera = new THREE.PerspectiveCamera(
-      60, // Wider FOV for better planet viewing
-      mountRef.current.clientWidth / mountRef.current.clientHeight,
-      0.00001, // Much smaller near plane for viewing tiny objects
-      500000 // Much larger far plane for distant stars
-    );
-    camera.position.set(0, 0.5, 2); // Slightly elevated position
-    cameraRef.current = camera;
-
-    // Renderer setup with improved quality
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: true,
-      logarithmicDepthBuffer: true // Better handling of vastly different scales
-    });
-    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping; // Better color reproduction
-    renderer.toneMappingExposure = 0.8;
-    // Replace deprecated sRGBEncoding with the new approach
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    rendererRef.current = renderer;
-    
-    // Clear any existing canvas elements before adding a new one
-    while (mountRef.current.firstChild) {
-      mountRef.current.removeChild(mountRef.current.firstChild);
-    }
-    
-    mountRef.current.appendChild(renderer.domElement);
-
-    // Enhanced controls setup
-    if (cameraRef.current && rendererRef.current) {
-      controlsRef.current = new OrbitControls(cameraRef.current, rendererRef.current.domElement);
-      controlsRef.current.enableDamping = true;
-      controlsRef.current.dampingFactor = 0.05;
-      controlsRef.current.screenSpacePanning = false;
-      controlsRef.current.minDistance = 0.0001; // Allow very close approach
-      controlsRef.current.maxDistance = 100000; // Allow very distant viewing
-      controlsRef.current.zoomSpeed = 2; // Faster zoom for large distances
-      controlsRef.current.rotateSpeed = 0.8; // Smoother rotation
-      controlsRef.current.keyPanSpeed = 20; // Faster keyboard panning
-    }
-
-    // Enhanced starfield with different star sizes and colors
-    const starGeometry = new THREE.BufferGeometry();
-    const starVertices = [];
-    const starColors = [];
-    const starSizes = [];
-    
-    for (let i = 0; i < 20000; i++) {
-      const x = (Math.random() - 0.5) * 10000;
-      const y = (Math.random() - 0.5) * 10000;
-      const z = (Math.random() - 0.5) * 10000;
-      starVertices.push(x, y, z);
-      
-      // Random star colors (white, blue-white, yellow, orange, red)
-      const colorChoice = Math.random();
-      if (colorChoice > 0.8) {
-        starColors.push(0.9, 0.9, 1); // Blue-white
-      } else if (colorChoice > 0.6) {
-        starColors.push(1, 1, 0.9); // Yellow-white
-      } else if (colorChoice > 0.4) {
-        starColors.push(1, 0.8, 0.5); // Orange
-      } else if (colorChoice > 0.2) {
-        starColors.push(1, 0.5, 0.5); // Red
-      } else {
-        starColors.push(1, 1, 1); // White
-      }
-      
-      // Random star sizes
-      starSizes.push(Math.random() * 2 + 0.5);
-    }
-    
-    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-    starGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
-    starGeometry.setAttribute('size', new THREE.Float32BufferAttribute(starSizes, 1));
-    
-    const starMaterial = new THREE.PointsMaterial({
-      size: 0.05,
-      vertexColors: true,
-      sizeAttenuation: true
-    });
-    
-    const stars = new THREE.Points(starGeometry, starMaterial);
-    scene.add(stars);
-
-    // Add celestial bodies with enhanced visuals
-    Object.entries(CELESTIAL_BODIES).forEach(([key, body]) => {
-      // Calculate scale factor based on mode
-      const scaleFactor = realScale ? 1 : 50;
-      const geometry = new THREE.SphereGeometry(body.radius * scaleFactor, 64, 64);
-      
-      // Load texture if available
-      let material;
-      if (body.texture) {
-        const texture = textureLoader.current.load(body.texture);
-        material = new THREE.MeshPhongMaterial({ 
-          map: texture,
-          color: body.color,
-          emissive: body.type === 'star' ? body.color : 0x000000,
-          emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
-          shininess: body.type === 'star' ? 0 : 30
-        });
-      } else {
-        material = new THREE.MeshPhongMaterial({ 
-          color: body.color,
-          emissive: body.type === 'star' ? body.color : 0x000000,
-          emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0
-        });
-      }
-      
-      const mesh = new THREE.Mesh(geometry, material);
-      
-      // Apply axial tilt if defined
-      if (body.axialTilt) {
-        mesh.rotation.z = body.axialTilt * Math.PI / 180;
-      }
-      
-      mesh.position.set(...body.position);
-      mesh.castShadow = body.type !== 'star';
-      mesh.receiveShadow = body.type !== 'star';
-      mesh.userData = { bodyData: body, bodyKey: key };
-      
-      scene.add(mesh);
-      celestialBodies.current[key] = mesh;
-      
-      // Add atmosphere if defined
-      if (body.atmosphere) {
-        const atmosphereGeometry = new THREE.SphereGeometry(
-          body.radius * scaleFactor * 1.05, 
-          64, 
-          64
-        );
-        const atmosphereMaterial = new THREE.MeshPhongMaterial({
-          color: body.atmosphere.color,
-          transparent: true,
-          opacity: body.atmosphere.opacity,
-          side: THREE.DoubleSide
-        });
-        const atmosphereMesh = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
-        atmosphereMesh.position.copy(mesh.position);
-        scene.add(atmosphereMesh);
-        atmosphereRefs.current[key] = atmosphereMesh;
-      }
-      
-      // Add clouds if defined
-      if (body.clouds) {
-        const cloudsGeometry = new THREE.SphereGeometry(
-          body.radius * scaleFactor * 1.02, 
-          64, 
-          64
-        );
-        const cloudsTexture = textureLoader.current.load(body.clouds.texture);
-        const cloudsMaterial = new THREE.MeshPhongMaterial({
-          map: cloudsTexture,
-          transparent: true,
-          opacity: 0.8,
-          side: THREE.DoubleSide
-        });
-        const cloudsMesh = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
-        cloudsMesh.position.copy(mesh.position);
-        scene.add(cloudsMesh);
-        cloudsRefs.current[key] = cloudsMesh;
-      }
-      
-      // Add orbit path for planets with proper elliptical shape
-      if (body.orbitalRadius) {
-        // Create elliptical orbit path
-        const segments = 128;
-        const orbitCurve = new THREE.EllipseCurve(
-          0, 0,                                    // Center x, y
-          body.orbitalRadius, body.orbitalRadius * (1 - body.orbitalEccentricity || 0), // xRadius, yRadius
-          0, 2 * Math.PI,                          // Start angle, end angle
-          false,                                   // Clockwise
-          0                                        // Rotation
-        );
-        
-        const orbitPoints = orbitCurve.getPoints(segments);
-        const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
-        
-        // Convert 2D points to 3D
-        const positions = new Float32Array(segments * 3);
-        for (let i = 0; i < segments; i++) {
-          const point = orbitPoints[i];
-          positions[i * 3] = point.x;
-          positions[i * 3 + 1] = 0;
-          positions[i * 3 + 2] = point.y;
-        }
-        orbitGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        
-        const orbitMaterial = new THREE.LineBasicMaterial({ 
-          color: 0x444466, 
-          transparent: true, 
-          opacity: 0.3,
-          linewidth: 1
-        });
-        
-        const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
-        
-        // Apply orbital inclination
-        if (body.orbitalInclination) {
-          orbitLine.rotation.x = body.orbitalInclination * Math.PI / 180;
-        }
-        
-        scene.add(orbitLine);
-        orbitRefs.current[key] = orbitLine;
-      }
-      
-      // Add text label for the body
-      // Create label reference but don't append to DOM yet
-      const labelDiv = document.createElement('div');
-      labelDiv.className = 'absolute px-2 py-1 bg-black/50 text-white text-xs rounded pointer-events-none';
-      labelDiv.style.display = 'none';
-      labelDiv.textContent = body.name;
-      // Store in ref but don't append to DOM until we're sure mountRef exists
-      infoLabels.current[key] = labelDiv;
-    });
-
-    // Add spacecraft with improved model
-    const spacecraftGroup = new THREE.Group();
-    
-    // Main body
-    const bodyGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.04, 8);
-    const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x888888 });
-    const bodyMesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    bodyMesh.rotation.x = Math.PI / 2;
-    spacecraftGroup.add(bodyMesh);
-    
-    // Solar panels
-    const panelGeometry = new THREE.BoxGeometry(0.05, 0.01, 0.02);
-    const panelMaterial = new THREE.MeshPhongMaterial({ color: 0x3b82f6 });
-    const leftPanel = new THREE.Mesh(panelGeometry, panelMaterial);
-    leftPanel.position.set(-0.03, 0, 0);
-    spacecraftGroup.add(leftPanel);
-    
-    const rightPanel = new THREE.Mesh(panelGeometry, panelMaterial);
-    rightPanel.position.set(0.03, 0, 0);
-    spacecraftGroup.add(rightPanel);
-    
-    // Antenna
-    const antennaGeometry = new THREE.CylinderGeometry(0.001, 0.001, 0.03, 4);
-    const antennaMaterial = new THREE.MeshPhongMaterial({ color: 0xcccccc });
-    const antennaMesh = new THREE.Mesh(antennaGeometry, antennaMaterial);
-    antennaMesh.position.set(0, 0.02, 0);
-    spacecraftGroup.add(antennaMesh);
-    
-    // Thrusters
-    const thrusterGeometry = new THREE.ConeGeometry(0.005, 0.01, 8);
-    const thrusterMaterial = new THREE.MeshPhongMaterial({ color: 0x555555 });
-    const thruster = new THREE.Mesh(thrusterGeometry, thrusterMaterial);
-    thruster.position.set(0, 0, 0.02);
-    thruster.rotation.x = Math.PI;
-    spacecraftGroup.add(thruster);
-    
-    // Thruster exhaust (particle effect)
-    const exhaustGeometry = new THREE.BufferGeometry();
-    const exhaustVertices = [];
-    for (let i = 0; i < 100; i++) {
-      exhaustVertices.push(
-        (Math.random() - 0.5) * 0.005,
-        (Math.random() - 0.5) * 0.005,
-        Math.random() * 0.03 + 0.02
-      );
-    }
-    exhaustGeometry.setAttribute('position', new THREE.Float32BufferAttribute(exhaustVertices, 3));
-    const exhaustMaterial = new THREE.PointsMaterial({
-      color: 0x3b82f6,
-      size: 0.002,
-      transparent: true,
-      opacity: 0.7
-    });
-    const exhaust = new THREE.Points(exhaustGeometry, exhaustMaterial);
-    exhaust.visible = false; // Only visible when thrusting
-    spacecraftGroup.add(exhaust);
-    
-    spacecraftGroup.position.set(
-      spacecraft.position.x,
-      spacecraft.position.y,
-      spacecraft.position.z
-    );
-    scene.add(spacecraftGroup);
-    spacecraftRef.current = spacecraftGroup;
-
-    // Add enhanced lighting
-    const ambientLight = new THREE.AmbientLight(0x202020, 0.2);
-    scene.add(ambientLight);
-
-    // Sun light with shadows
-    const sunLight = new THREE.PointLight(0xffffee, 1.5, 1000);
-    sunLight.position.set(0, 0, 0);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
-    sunLight.shadow.camera.near = 0.01;
-    sunLight.shadow.camera.far = 100;
-    scene.add(sunLight);
-    
-    // Add a subtle directional light to improve visibility of dark sides
-    const fillLight = new THREE.DirectionalLight(0x404060, 0.2);
-    fillLight.position.set(1, 0.5, 0.5);
-    scene.add(fillLight);
-
-    // Handle window resize
-    const handleResize = () => {
-      if (!mountRef.current || !cameraRef.current || !rendererRef.current) return;
-      
-      // Use window dimensions for full screen
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      
-      cameraRef.current.aspect = width / height;
-      cameraRef.current.updateProjectionMatrix();
-      rendererRef.current.setSize(width, height);
-    };
-    
-    // Call resize handler immediately to set initial size
-    handleResize();
-    window.addEventListener('resize', handleResize);
-
-    // Add click handler for selecting celestial bodies
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    
-    const handleClick = (event) => {
-      // Calculate mouse position in normalized device coordinates
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-      
-      // Update the picking ray with the camera and mouse position
-      raycaster.setFromCamera(mouse, cameraRef.current);
-      
-      // Calculate objects intersecting the picking ray
-      const celestialBodyMeshes = Object.values(celestialBodies.current);
-      const intersects = raycaster.intersectObjects(celestialBodyMeshes, false);
-      
-      if (intersects.length > 0) {
-        const selectedMesh = intersects[0].object;
-        const bodyKey = selectedMesh.userData.bodyKey;
-        setSelectedBody(bodyKey);
-        
-        // Focus camera on selected body
-        if (controlsRef.current) {
-          controlsRef.current.target.copy(selectedMesh.position);
-          
-          // Set camera position relative to body size
-          const bodyRadius = CELESTIAL_BODIES[bodyKey].radius;
-          const distanceFactor = bodyRadius * 200;
-          const newCameraPosition = new THREE.Vector3(
-            selectedMesh.position.x + distanceFactor,
-            selectedMesh.position.y + distanceFactor * 0.5,
-            selectedMesh.position.z + distanceFactor
-          );
-          
-          // Animate camera movement
-          const startPosition = cameraRef.current.position.clone();
-          const endPosition = newCameraPosition;
-          const duration = 1000; // ms
-          const startTime = Date.now();
-          
-          const animateCamera = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const easeProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
-            
-            cameraRef.current.position.lerpVectors(startPosition, endPosition, easeProgress);
-            
-            if (progress < 1) {
-              requestAnimationFrame(animateCamera);
-            }
-          };
-          
-          animateCamera();
-        }
-      } else {
-        setSelectedBody(null);
-      }
-    };
-    
-    window.addEventListener('click', handleClick);
-
-    // Add keyboard controls for toggling display options
-    const handleKeyPress = (e) => {
-      if (e.key === 'o') {
-        setShowOrbits(prev => !prev);
-        Object.values(orbitRefs.current).forEach(orbit => {
-          orbit.visible = !orbit.visible;
-        });
-      } else if (e.key === 'l') {
-        setShowLabels(prev => !prev);
-      } else if (e.key === 's') {
-        setRealScale(prev => !prev);
-        // This requires re-creating the scene with new scale, handled in a separate effect
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyPress);
+    const { scene, camera, renderer, controls } = setupScene(mountRef, sceneRef, cameraRef, rendererRef, controlsRef);
+    setupLighting(scene);
+    setupStarfield(scene);
+    setupCelestialBodies(scene, celestialBodies, orbitRefs, atmosphereRefs, cloudsRefs, realScale, textureLoader, setTextureLoadStatus);
+    setupSpacecraft(scene, camera, spacecraftRef);
+    const cleanupEventHandlers = setupEventHandlers(mountRef, cameraRef, rendererRef, controlsRef, celestialBodies, setSelectedBody);
+    const cleanupKeyboardControls = setupKeyboardControls(setShowOrbits, setShowLabels, setRealScale, orbitRefs);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('click', handleClick);
-      window.removeEventListener('keydown', handleKeyPress);
-      
-      // Remove labels from DOM
-      Object.values(infoLabels.current).forEach(label => {
-        if (label.parentNode) {
-          label.parentNode.removeChild(label);
-        }
-      });
-      
-      // Dispose of all Three.js objects
-      Object.values(celestialBodies.current).forEach(mesh => {
-        if (mesh.geometry) mesh.geometry.dispose();
-        if (mesh.material) {
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach(material => material.dispose());
-          } else {
-            mesh.material.dispose();
+      cleanupEventHandlers();
+      cleanupKeyboardControls();
+      controls.dispose();
+      renderer.dispose();
+      scene.traverse((object) => {
+        if (object.isMesh) {
+          object.geometry.dispose();
+          if (object.material.isMaterial) {
+            // Assuming cleanMaterial is defined elsewhere or will be added
+            // For now, directly dispose material
+            if (Array.isArray(object.material)) {
+              object.material.forEach(material => material.dispose());
+            } else {
+              object.material.dispose();
+            }
           }
         }
-        if (sceneRef.current) sceneRef.current.remove(mesh);
       });
-      
-      if (spacecraftRef.current) {
-        if (spacecraftRef.current.geometry) spacecraftRef.current.geometry.dispose();
-        if (spacecraftRef.current.material) spacecraftRef.current.material.dispose();
-        if (sceneRef.current) sceneRef.current.remove(spacecraftRef.current);
-      }
-      
-      if (mountRef.current && rendererRef.current && rendererRef.current.domElement) {
-        mountRef.current.removeChild(rendererRef.current.domElement);
-      }
-      
-      if (rendererRef.current) rendererRef.current.dispose();
-      
-      // Clear references
-      celestialBodies.current = {};
-      spacecraftRef.current = null;
-      sceneRef.current = null;
-      cameraRef.current = null;
-      rendererRef.current = null;
     };
-  }, []);
+  }, [realScale, textureLoadStatus]);
 
   // Animation loop
   useEffect(() => {
@@ -590,53 +183,57 @@ export default function SpaceRenderer({
       }
 
       // Update celestial body labels if they exist
-      if (showLabels && mountRef.current) {
+      if (showLabels) {
+        const newLabelData = {};
         Object.entries(celestialBodies.current).forEach(([key, mesh]) => {
-          if (infoLabels.current[key]) {
-            const label = infoLabels.current[key];
-            
-            // Make sure label is in the DOM
-            if (!label.parentNode && mountRef.current) {
-              mountRef.current.appendChild(label);
-            }
-            
-            // Convert 3D position to screen position
-            const position = mesh.position.clone();
-            position.project(cameraRef.current);
-            
-            // Convert to screen coordinates
-            const x = (position.x * 0.5 + 0.5) * window.innerWidth;
-            const y = (-(position.y * 0.5) + 0.5) * window.innerHeight;
-            
-            // Only show label if object is in front of camera
-            if (position.z < 1) {
-              label.style.display = 'block';
-              label.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
-              
-              // Add distance information if a body is selected
-              if (selectedBody === key) {
-                const body = CELESTIAL_BODIES[key];
-                label.innerHTML = `
-                  <div class="font-bold">${body.name}</div>
-                  <div class="text-xs opacity-80">Mass: ${body.mass.toExponential(2)} kg</div>
-                  <div class="text-xs opacity-80">Radius: ${(body.radius * 149597870.7).toFixed(0)} km</div>
-                `;
-              } else {
-                label.textContent = CELESTIAL_BODIES[key].name;
-              }
-            } else {
-              label.style.display = 'none';
-            }
+          const body = CELESTIAL_BODIES[key];
+          const position = mesh.position.clone();
+          position.project(cameraRef.current);
+
+          const x = (position.x * 0.5 + 0.5) * window.innerWidth;
+          const y = (-(position.y * 0.5) + 0.5) * window.innerHeight;
+
+          if (position.z < 1) {
+            newLabelData[key] = {
+              id: key,
+              name: body.name,
+              x: x + 15, // Offset label to the right
+              y: y,
+              display: 'block',
+              isSelected: selectedBody === key,
+              bodyData: body,
+              distance: spacecraft ? calculateDistanceToBody(key) : undefined,
+            };
+          } else {
+            newLabelData[key] = {
+              id: key,
+              name: body.name,
+              x: x,
+              y: y,
+              display: 'none',
+              isSelected: false,
+              bodyData: body,
+              distance: undefined,
+            };
           }
         });
+        setLabelData(newLabelData);
       } else {
-        // Hide all labels
-        Object.values(infoLabels.current).forEach(label => {
-          label.style.display = 'none';
-        });
+        setLabelData({}); // Clear all labels if showLabels is false
       }
 
       if (rendererRef.current && sceneRef.current && cameraRef.current) {
+        // Update spacecraft model position and orientation
+        updateSpacecraftModels([spacecraft]);
+
+        // If manual control is off, update camera position to follow spacecraft
+        if (!manualControl && spacecraftRef.current) {
+          cameraRef.current.position.copy(spacecraftRef.current.position);
+          // Adjust camera offset from spacecraft
+          cameraRef.current.position.add(new THREE.Vector3(0, 0.5, 1.5));
+          cameraRef.current.lookAt(spacecraftRef.current.position);
+        }
+
         rendererRef.current.render(sceneRef.current, cameraRef.current);
       }
       animationId = requestAnimationFrame(animate);
@@ -649,7 +246,7 @@ export default function SpaceRenderer({
         cancelAnimationFrame(animationId);
       }
     };
-  }, [spacecraft, onSpacecraftUpdate, isPaused, timeScale, gameTime, showLabels, selectedBody]);
+  }, [spacecraft, onSpacecraftUpdate, isPaused, timeScale, gameTime, showLabels, selectedBody, manualControl]);
 
   // Enhanced keyboard controls for camera and visualization options
   useEffect(() => {
@@ -747,14 +344,9 @@ export default function SpaceRenderer({
         const scaleFactor = realScale ? 1 : 50;
         celestialBodies.current[key].scale.set(scaleFactor, scaleFactor, scaleFactor);
         
-        // Also update atmospheres and clouds if they exist
-        if (atmosphereRefs.current[key]) {
-          atmosphereRefs.current[key].scale.set(scaleFactor, scaleFactor, scaleFactor);
-        }
-        
-        if (cloudsRefs.current[key]) {
-          cloudsRefs.current[key].scale.set(scaleFactor, scaleFactor, scaleFactor);
-        }
+        // No need to update atmospheres and clouds separately since they're now children
+        // of the planet mesh and will scale automatically with their parent
+        console.log(`Updated scale for ${body.name} to ${scaleFactor}x`);
       }
     });
     
@@ -806,50 +398,20 @@ export default function SpaceRenderer({
         <div>F - Focus on target body</div>
       </div>
       
-      {/* Display info about selected body if any */}
-      {selectedBody && (
-        <div className="absolute top-4 left-4 bg-gray-900/80 text-white p-3 rounded backdrop-blur-sm border border-gray-700/50 z-10 max-w-xs">
-          <div className="text-lg font-bold">{CELESTIAL_BODIES[selectedBody].name}</div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
-            <div className="text-gray-300">Type:</div>
-            <div>{CELESTIAL_BODIES[selectedBody].type}</div>
-            
-            <div className="text-gray-300">Mass:</div>
-            <div>{CELESTIAL_BODIES[selectedBody].mass.toExponential(2)} kg</div>
-            
-            <div className="text-gray-300">Radius:</div>
-            <div>{(CELESTIAL_BODIES[selectedBody].radius * 149597870.7).toFixed(0)} km</div>
-            
-            {CELESTIAL_BODIES[selectedBody].orbitalPeriod && (
-              <>
-                <div className="text-gray-300">Orbital Period:</div>
-                <div>{CELESTIAL_BODIES[selectedBody].orbitalPeriod} days</div>
-              </>
-            )}
-            
-            {CELESTIAL_BODIES[selectedBody].rotationPeriod && (
-              <>
-                <div className="text-gray-300">Rotation Period:</div>
-                <div>{Math.abs(CELESTIAL_BODIES[selectedBody].rotationPeriod)} days
-                  {CELESTIAL_BODIES[selectedBody].rotationPeriod < 0 ? ' (retrograde)' : ''}
-                </div>
-              </>
-            )}
-            
-            {spacecraft && (
-              <>
-                <div className="text-gray-300">Distance:</div>
-                <div>
-                  {calculateDistanceToBody(selectedBody).toFixed(4)} AU
-                  <span className="text-xs text-gray-400 ml-1">
-                    ({(calculateDistanceToBody(selectedBody) * 149597870.7).toFixed(0)} km)
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Render labels using the Label component */}
+      {Object.values(labelData).map(label => (
+        <Label
+          key={label.id}
+          id={label.id}
+          name={label.name}
+          x={label.x}
+          y={label.y}
+          display={label.display}
+          isSelected={label.isSelected}
+          bodyData={label.bodyData}
+          distance={label.distance}
+        />
+      ))}
     </div>
   );
   

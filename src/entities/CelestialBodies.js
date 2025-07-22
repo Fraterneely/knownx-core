@@ -65,7 +65,7 @@ export const CELESTIAL_BODIES = {
         opacity: 0.3
       },
       clouds: {
-        texture: '/textures/earth_clouds.jpg',
+        texture: '/textures/earth_clouds.png',
         speed: 0.0005
       }
     },

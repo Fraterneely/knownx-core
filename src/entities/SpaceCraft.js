@@ -21,7 +21,7 @@ export const Spacecraft = {
         mass: 1500,
         target_body: "Mars",
         mission_status: "active",
-        orientation: { pitch: 0, yaw: 0, roll: 0 }, // Spacecraft orientation in radians
+        orientation: { pitch: 0, yaw: 0, roll: 1 }, // Spacecraft orientation in radians
         thrust_vector: { x: 0, y: 0, z: 0 }, // Current thrust direction
         thrust_level: 0, // Current thrust level (0-1)
         autopilot: false, // Autopilot status
@@ -137,24 +137,19 @@ export const Spacecraft = {
     };
   },
   
-  // Calculate orientation based on thrust vector
-  updateOrientation: (spacecraft, targetVector) => {
-    if (!targetVector || (targetVector.x === 0 && targetVector.y === 0 && targetVector.z === 0)) {
-      return spacecraft; // No change in orientation
-    }
-    
-    // Calculate pitch (rotation around X-axis)
-    const pitch = Math.atan2(
-      Math.sqrt(targetVector.x * targetVector.x + targetVector.z * targetVector.z),
-      targetVector.y
-    );
-    
-    // Calculate yaw (rotation around Y-axis)
-    const yaw = Math.atan2(targetVector.z, targetVector.x);
-    
-    // Roll can be controlled separately or kept at 0 for simplicity
-    const roll = 0;
-    
+  // Update orientation based on delta pitch and delta yaw
+  updateOrientation: (spacecraft, deltaPitch, deltaYaw) => {
+    let { pitch, yaw, roll } = spacecraft.orientation;
+
+    pitch += deltaPitch;
+    yaw += deltaYaw;
+
+    // Clamp pitch to prevent flipping (e.g., -PI/2 to PI/2)
+    pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+
+    // Keep yaw within 0 to 2*PI
+    yaw = (yaw + 2 * Math.PI) % (2 * Math.PI);
+
     return {
       ...spacecraft,
       orientation: { pitch, yaw, roll }

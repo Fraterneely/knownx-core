@@ -3,6 +3,7 @@ const routes = {
     Game: '/game',
     Settings: '/settings',
     About: '/about',
+    Codex: '/codex',
   };
   
   /**
@@ -11,6 +12,7 @@ const routes = {
    * @returns {string} - Route path (e.g., '/')
    */
   export function createPageUrl(name) {
+    console.log("Routing to ". name + " ...");
     return routes[name] || '/';
   }
   

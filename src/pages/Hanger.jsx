@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Spacecraft } from '@/entities/Spacecraft';
+import { Spacecraft } from '@/entities/SpaceCraft';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Zap, Fuel, Wind, Edit, Save, Trash2, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createPageUrl } from '@/utils/router';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 

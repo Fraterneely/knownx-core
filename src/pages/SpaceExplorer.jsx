@@ -201,7 +201,6 @@ export default function SpaceExplorer() {
           spacecraft={spacecraft}
           currentMission={currentMission}
           gameTime={gameTime}
-          className="pointer-events-auto"
         />
 
         {/* Control Panel or Toggle Button */}

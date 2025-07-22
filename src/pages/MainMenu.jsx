@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createPageUrl } from '../utils/router';
 import { Button } from '@/components/ui/button';
 import { Rocket, Library, Wrench, PlayCircle } from 'lucide-react';
 
@@ -25,13 +25,13 @@ export default function MainMenu() {
         </div>
 
         <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link to={createPageUrl('SpaceExplorer')}>
+          <Link to={"/game"}>
             <Button size="lg" className="w-64 bg-blue-600 hover:bg-blue-700 text-lg py-6 shadow-lg">
               <PlayCircle className="w-5 h-5 mr-3" />
               Start Game
             </Button>
           </Link>
-          <Link to={createPageUrl('Hangar')}>
+          <Link to={createPageUrl('Settings')}>
             <Button size="lg" variant="outline" className="w-64 text-lg py-6 shadow-lg border-blue-500 hover:bg-blue-900/50 hover:text-white">
               <Wrench className="w-5 h-5 mr-3" />
               Hangar
@@ -44,10 +44,6 @@ export default function MainMenu() {
             </Button>
           </Link>
         </div>
-      </div>
-      
-      <div className="absolute bottom-4 text-xs text-gray-600">
-        Created with base44
       </div>
     </div>
   );
