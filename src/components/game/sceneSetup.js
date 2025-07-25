@@ -14,7 +14,7 @@ export function setupScene(mountRef, sceneRef, cameraRef, rendererRef, controlsR
     0.00001, // Much smaller near plane for viewing tiny objects
     500000 // Much larger far plane for distant stars
   );
-  camera.position.set(0, 0.5, 2); // Slightly elevated position
+  camera.position.set(0, 2, 10); // Slightly elevated position
   cameraRef.current = camera;
 
   // Renderer setup with improved quality

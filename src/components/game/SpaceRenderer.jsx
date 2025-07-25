@@ -12,11 +12,11 @@ import { setupCelestialBodies } from './celestialBodySetup';
 import { setupSpacecraft } from './spacecraftSetup';
 import { setupEventHandlers } from './eventHandlers';
 import { setupKeyboardControls } from './keyboardControls';
+import { loadAllSpacecraftModels } from '../../entities/Spacecrafts'
 
 
 
 export default function SpaceRenderer({ 
-  spacecraft, 
   onSpacecraftUpdate, 
   targetBody,
   isPaused,
@@ -52,7 +52,8 @@ export default function SpaceRenderer({
     setupLighting(scene);
     setupStarfield(scene);
     setupCelestialBodies(scene, celestialBodies, orbitRefs, atmosphereRefs, cloudsRefs, realScale, textureLoader, setTextureLoadStatus);
-    setupSpacecraft(scene, camera, spacecraftRef);
+    console.log("Starting Spaccraft laoding...")
+    loadAllSpacecraftModels(scene, camera, spacecraftRef);
     const cleanupEventHandlers = setupEventHandlers(mountRef, cameraRef, rendererRef, controlsRef, celestialBodies, setSelectedBody);
     const cleanupKeyboardControls = setupKeyboardControls(setShowOrbits, setShowLabels, setRealScale, orbitRefs);
 
@@ -120,23 +121,23 @@ export default function SpaceRenderer({
           });
           
           // Calculate gravitational forces
-          const gravityForce = Spacecraft.calculateGravity(spacecraft, currentCelestialBodies);
+          const gravityForce = Spacecraft.calculateGravity(spacecraftRef.current, currentCelestialBodies);
           
           // Apply gravity to velocity
           let updatedSpacecraft = {
-            ...spacecraft,
+            ...spacecraftRef,
             velocity: {
-              x: spacecraft.velocity.x + gravityForce.x * deltaTime,
-              y: spacecraft.velocity.y + gravityForce.y * deltaTime,
-              z: spacecraft.velocity.z + gravityForce.z * deltaTime
+              x: spacecraftRef.current.velocity.x + gravityForce.x * deltaTime,
+              y: spacecraftRef.current.velocity.y + gravityForce.y * deltaTime,
+              z: spacecraftRef.current.velocity.z + gravityForce.z * deltaTime
             }
           };
           
           // Apply autopilot if enabled
-          if (spacecraft.autopilot && spacecraft.target_body) {
+          if (spacecraftRef.current.autopilot && spacecraftRef.current.target_body) {
             updatedSpacecraft = Spacecraft.navigateToTarget(
               updatedSpacecraft, 
-              spacecraft.target_body, 
+              spacecraftRef.current.target_body, 
               currentCelestialBodies, 
               deltaTime
             );
@@ -202,7 +203,7 @@ export default function SpaceRenderer({
               display: 'block',
               isSelected: selectedBody === key,
               bodyData: body,
-              distance: spacecraft ? calculateDistanceToBody(key) : undefined,
+              distance: spacecraftRef.current ? calculateDistanceToBody(key) : undefined,
             };
           } else {
             newLabelData[key] = {
@@ -224,7 +225,7 @@ export default function SpaceRenderer({
 
       if (rendererRef.current && sceneRef.current && cameraRef.current) {
         // Update spacecraft model position and orientation
-        updateSpacecraftModels([spacecraft]);
+        updateSpacecraftModels([spacecraftRef.current]);
 
         // If manual control is off, update camera position to follow spacecraft
         if (!manualControl && spacecraftRef.current) {
@@ -246,7 +247,7 @@ export default function SpaceRenderer({
         cancelAnimationFrame(animationId);
       }
     };
-  }, [spacecraft, onSpacecraftUpdate, isPaused, timeScale, gameTime, showLabels, selectedBody, manualControl]);
+  }, [spacecraftRef.current, onSpacecraftUpdate, isPaused, timeScale, gameTime, showLabels, selectedBody, manualControl]);
 
   // Enhanced keyboard controls for camera and visualization options
   useEffect(() => {
@@ -417,13 +418,13 @@ export default function SpaceRenderer({
   
   // Helper function to calculate distance from spacecraft to a celestial body
   function calculateDistanceToBody(bodyKey) {
-    if (!spacecraft || !celestialBodies.current[bodyKey]) return 0;
+    if (!spacecraftRef.current || !celestialBodies.current[bodyKey]) return 0;
     
     const bodyPosition = celestialBodies.current[bodyKey].position;
     return Math.sqrt(
-      Math.pow(spacecraft.position.x - bodyPosition.x, 2) +
-      Math.pow(spacecraft.position.y - bodyPosition.y, 2) +
-      Math.pow(spacecraft.position.z - bodyPosition.z, 2)
+      Math.pow(spacecraftRef.current.position.x - bodyPosition.x, 2) +
+      Math.pow(spacecraftRef.current.position.y - bodyPosition.y, 2) +
+      Math.pow(spacecraftRef.current.position.z - bodyPosition.z, 2)
     );
   }
 }

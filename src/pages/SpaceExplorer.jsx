@@ -187,7 +187,6 @@ export default function SpaceExplorer() {
 
       {/* 3D Space Environment */}
       <SpaceRenderer
-        spacecraft={spacecraft}
         onSpacecraftUpdate={handleSpacecraftUpdate}
         targetBody={spacecraft.target_body}
         isPaused={isPaused || !!gameOverReason} // Pause game if game over

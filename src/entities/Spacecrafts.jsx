@@ -10,13 +10,15 @@ const loader = new GLTFLoader();
  * @param {THREE.Scene} scene - Three.js scene to attach models to.
  * @returns {Promise} - Resolves when all models are loaded.
  */
-export async function loadAllSpacecraftModels(scene) {
+export async function loadAllSpacecraftModels(scene, camera, spacecraftRef) {
   const spacecraftList = Spacecraft.list();
+  console.log("Spacecrafts list found!")
 
   const loadPromises = spacecraftList.map((sc) => {
     return new Promise((resolve, reject) => {
+      console.log("Found craft named " + sc.name)
       loader.load(
-        '/models/spacecrafts/spaceship_low_poly.glb', // You can customize per model with sc.model if needed
+        '/models/spacecrafts/spaceship_low_poly.glb',
         (gltf) => {
           const model = gltf.scene;
           model.scale.set(0.001, 0.001, 0.001); // Adjust based on model size
@@ -25,8 +27,10 @@ export async function loadAllSpacecraftModels(scene) {
 
           scene.add(model);
           spacecraftObjects.set(sc.name, model);
+          spacecraftRef.current = spacecraftObjects;
 
           resolve();
+          console.log(`Spacecraft ${sc.name} resolved successfully!`)
         },
         undefined,
         (err) => {
