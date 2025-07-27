@@ -1,10 +1,13 @@
 import * as THREE from 'three';
+import { SpaceScaler } from '../../utils/scaler';
 import { CELESTIAL_BODIES, NON_SOLID_TYPES } from '../../entities/CelestialBodies';
+
+const scaler = new SpaceScaler();
 
 export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setTextureLoadStatus) {
   Object.entries(CELESTIAL_BODIES).forEach(([key, body]) => {
     const scaleFactor = 1;
-    const geometry = new THREE.SphereGeometry(body.radius * scaleFactor, 64, 64);
+    const geometry = new THREE.SphereGeometry(scaler.scaleValue(body.radius) * scaleFactor, 64, 64);
 
     let material;
     if (body.texture) {
@@ -73,14 +76,15 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       mesh.rotation.z = body.axialTilt * Math.PI / 180;
     }
 
-    mesh.position.copy(body.position);
+    // mesh.position.copy(body.position);
+    scaler.positionMesh(mesh, body.position);
     mesh.userData = { bodyData: body, bodyKey: key };
 
     scene.add(mesh);
 
     // Glow for stars Add a little pulsating effect
     if (body.type === "star") {
-      const glowGeometry = new THREE.SphereGeometry(body.radius * 1.08, 64, 64);
+      const glowGeometry = new THREE.SphereGeometry(scaler.scaleValue(body.radius * 1.08), 64, 64);
       const glowMaterial = new THREE.MeshBasicMaterial({
         color: new THREE.Color(body.color),
         transparent: true,
@@ -90,7 +94,8 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       });
 
       const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
-      glowMesh.position.copy(body.position);
+      // glowMesh.position.copy(body.position);
+      scaler.positionMesh(glowMesh, body.position);
       scene.add(glowMesh);
 
     
@@ -109,7 +114,7 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
 
     if (body.atmosphere) {
       const atmosphereGeometry = new THREE.SphereGeometry(
-        body.radius * 1.05,
+        scaler.scaleValue(body.radius * 1.05),
         64,
         64
       );
@@ -126,7 +131,7 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
 
     if (body.clouds) {
       const cloudsGeometry = new THREE.SphereGeometry(
-        body.radius * 1.02,
+        scaler.scaleValue(body.radius * 1.02),
         64,
         64
       );
@@ -149,15 +154,22 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
 
     if (body.orbitalRadius) {
       const segments = 128;
+      const xRadius = scaler.scaleValue(body.orbitalRadius);
+      const yRadius = scaler.scaleValue(body.orbitalRadius * (1 - (body.orbitalEccentricity || 0)));
+
       const orbitCurve = new THREE.EllipseCurve(
         0, 0,
-        body.orbitalRadius, body.orbitalRadius * (1 - body.orbitalEccentricity || 0),
+        xRadius, yRadius,
         0, 2 * Math.PI,
         false,
         0
       );
 
-      const orbitPoints = orbitCurve.getPoints(segments);
+
+      let orbitPoints = orbitCurve.getPoints(segments);
+      // Close the loop by pushing the first point again
+      orbitPoints.push(orbitPoints[0]);
+
       const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
 
       const positions = new Float32Array(segments * 3);

@@ -1,17 +1,18 @@
 // Enhanced celestial body data with more accurate parameters
 import { Vector3 } from 'three';
+import * as THREE from 'three';
 
 export const CELESTIAL_BODIES = {
   sun: {
     name: 'Sun',
-    position: new Vector3(0, 0, 0),
+    position: new THREE.Vector3(0, 0, 0),
     radius: 0.00465, // AU
     color: '#FDB813',
     mass: 1.989e30,
     type: 'star',
     texture: '/textures/sun.jpg',
     emissive: true,
-    emissiveIntensity: 30,
+    emissiveIntensity: 100,
     rotationPeriod: 27 // days
   },
   mercury: {

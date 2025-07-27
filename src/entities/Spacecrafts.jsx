@@ -23,17 +23,12 @@ export async function loadAllSpacecraftModels(scene, camera, spacecraftRef, came
         '/models/spacecrafts/spaceship_low_poly.glb',
         (gltf) => {
           const model = gltf.scene;
-        
-          // const modelScale = scaler.scaleVector({x: sc.size.x, y: sc.size.y, z: sc.size.z});
           console.log(`Real Craft size: ${sc.size.x}, ${sc.size.y}, ${sc.size.z}`)
-          // console.log(`converted Craft size: ${modelScale}`);
-          // model.scale.copy(modelScale);
           scaler.scaleMesh(model, sc.size);
           console.log(`Craft's placed size: ${model.scale.x}, ${model.scale.y}, ${model.scale.z}`)
-          model.rotation.y = Math.PI; // Optional: face forward
-          model.position.set(sc.position.x, sc.position.y, sc.position.z);
+          model.rotation.y = Math.PI; // face forward
           console.log(`Real Craft position ${sc.position.x}, ${sc.position.y}, ${sc.position.z}`)
-          // scaler.positionMesh(model, sc.position);
+          scaler.positionMesh(model, sc.position);
           console.log(`Craft's placed position ${model.position.x}, ${model.position.y}, ${model.position.z}`)
 
           scene.add(model);
@@ -42,7 +37,7 @@ export async function loadAllSpacecraftModels(scene, camera, spacecraftRef, came
 
           // position camera for the FIRST craft
           if (index === 0) {
-            const offset = new THREE.Vector3(0.05, 0.02, 0.05); // Behind and above the ship
+            const offset = scaler.scaleArray([0.05, 0.02, 0.05]); // Behind and above the ship
             const cameraPosition = model.position.clone().add(offset);
 
             camera.position.copy(cameraPosition);
