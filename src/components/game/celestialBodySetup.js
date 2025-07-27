@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { CELESTIAL_BODIES } from '../../entities/CelestialBodies';
+import { CELESTIAL_BODIES, NON_SOLID_TYPES } from '../../entities/CelestialBodies';
 
-export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, realScale, textureLoader, setTextureLoadStatus) {
+export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setTextureLoadStatus) {
   Object.entries(CELESTIAL_BODIES).forEach(([key, body]) => {
-    const scaleFactor = realScale ? 1 : 50;
+    const scaleFactor = 1;
     const geometry = new THREE.SphereGeometry(body.radius * scaleFactor, 64, 64);
 
     let material;
@@ -59,16 +59,52 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
 
     const mesh = new THREE.Mesh(geometry, material);
 
+    // Shadows
+    if (NON_SOLID_TYPES.includes(body.type)) {
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+    }else{
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+    }
+
+    // Axial Tilt
     if (body.axialTilt) {
       mesh.rotation.z = body.axialTilt * Math.PI / 180;
     }
 
-    mesh.position.set(...body.position);
-    mesh.castShadow = body.type !== 'star';
-    mesh.receiveShadow = body.type !== 'star';
+    mesh.position.copy(body.position);
     mesh.userData = { bodyData: body, bodyKey: key };
 
     scene.add(mesh);
+
+    // Glow for stars Add a little pulsating effect
+    if (body.type === "star") {
+      const glowGeometry = new THREE.SphereGeometry(body.radius * 1.08, 64, 64);
+      const glowMaterial = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(body.color),
+        transparent: true,
+        opacity: 0.15,
+        side: THREE.BackSide,
+        depthWrite: false,
+      });
+
+      const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+      glowMesh.position.copy(body.position);
+      scene.add(glowMesh);
+
+    
+      function animateStar() {
+        const time = performance.now() * 0.001;
+        const scale = 1 + Math.sin(time * 2.5) * 0.01;
+        mesh.scale.set(scale, scale, scale);
+        glowMesh.scale.set(scale * 1.08, scale * 1.08, scale * 1.08);
+        requestAnimationFrame(animateStar);
+      }
+      animateStar();
+    }
+
+    
     celestialBodiesRef.current[key] = mesh;
 
     if (body.atmosphere) {

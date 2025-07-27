@@ -1,4 +1,5 @@
 
+import { Vector3 } from 'three';
 import spacecraftSchema from './SpaceCraft.json';
 
 // Physics constants
@@ -11,7 +12,8 @@ export const Spacecraft = {
     return [
       {
         name: "Imboni-1",
-        position: { x: 1.0, y: 0, z: 0 },
+        position: new Vector3(1, 0.0001, -0.0001),
+        size: new Vector3(0.0000000267, 0.0000000267, 0.0000000267),
         velocity: { x: 0, y: 0, z: 0 },
         fuel: 1000,
         max_fuel: 1000,
@@ -19,7 +21,7 @@ export const Spacecraft = {
         power: 100,
         thrust: 5000,
         mass: 1500,
-        target_body: "Mars",
+        target_body: "Sun",
         mission_status: "active",
         orientation: { pitch: 0, yaw: 0, roll: 1 }, // Spacecraft orientation in radians
         thrust_vector: { x: 0, y: 0, z: 0 }, // Current thrust direction

@@ -6,7 +6,7 @@ import SpaceRenderer from '../components/game/SpaceRenderer';
 import SpacecraftHUD from '../components/game/SpacecraftHUD';
 import ControlPanel from '../components/game/ControlPanel';
 import MissionPanel from '../components/game/MissionPanel';
-import GameOverScreen from '../components/game/GameOverScreen'; // New import
+import GameOverScreen from '../components/game/GameOverScreen';
 import { Button } from '@/components/ui/button';
 import { PanelRightOpen } from 'lucide-react';
 

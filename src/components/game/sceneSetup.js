@@ -4,30 +4,29 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 export function setupScene(mountRef, sceneRef, cameraRef, rendererRef, controlsRef) {
   // Scene setup
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000005); // Darker background for better contrast
+  scene.background = new THREE.Color('#000');
   sceneRef.current = scene;
 
-  // Camera setup with improved parameters for space viewing
+  // Camera setup
   const camera = new THREE.PerspectiveCamera(
-    30, // Wider FOV for better planet viewing
+    30,
     mountRef.current.clientWidth / mountRef.current.clientHeight,
-    0.00001, // Much smaller near plane for viewing tiny objects
+    0.000001, // Much smaller near plane for viewing tiny objects
     500000 // Much larger far plane for distant stars
   );
-  camera.position.set(0, 2, 10); // Slightly elevated position
+  // camera.position.set(0, 2, 10);
   cameraRef.current = camera;
 
-  // Renderer setup with improved quality
+  // Renderer setup
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
-    logarithmicDepthBuffer: true // Better handling of vastly different scales
+    logarithmicDepthBuffer: true
   });
   renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; // Better color reproduction
   renderer.toneMappingExposure = 0.8;
-  // Replace deprecated sRGBEncoding with the new approach
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   rendererRef.current = renderer;
 
@@ -50,6 +49,8 @@ export function setupScene(mountRef, sceneRef, cameraRef, rendererRef, controlsR
     controlsRef.current.rotateSpeed = 0.8; // Smoother rotation
     controlsRef.current.keyPanSpeed = 20; // Faster keyboard panning
   }
+
+  renderer.render(scene, camera);
 
   return { scene, camera, renderer, controls: controlsRef.current };
 }
