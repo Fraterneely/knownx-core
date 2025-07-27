@@ -6,6 +6,9 @@ import { setupCelestialBodies } from './celestialBodySetup';
 import { TextureLoader } from 'three';
 import { loadAllSpacecraftModels, updateSpacecraftModels } from '../../entities/Spacecrafts';
 import { Spacecraft } from '../../entities/SpaceCraft';
+import { SpaceScaler } from '../../utils/scaler';
+
+const scaler = new SpaceScaler();
 
 export default function SpaceRenderer({ 
   onSpacecraftUpdate, 
@@ -18,8 +21,8 @@ export default function SpaceRenderer({
   const cameraRef = useRef();
   const rendererRef = useRef();
   const controlsRef = useRef();
+  const activeLights = useRef([]);
   // const planetsRef = useRef([]);
-  // let selectedBodyRef = useRef();
   const celestialBodiesRef = useRef({}); // celestial bodies data here
   const atmosphereRefs = useRef({});
   const cloudsRefs = useRef({});
@@ -28,12 +31,13 @@ export default function SpaceRenderer({
   const spacecraftsRef = useRef([]); // spacecraft data here
   const [textureLoadStatus, setTextureLoadStatus] = useState({});
   const [sceneReady, setSceneReady] = useState(false);
+  const [activeLightsReady, setLightsReady] = useState(false);
 
   useEffect(() => {
     if (!mountRef.current) return;
 
     const { scene, camera, renderer, controls } = setupScene(mountRef, sceneRef, cameraRef, rendererRef, controlsRef);
-    setupLighting(scene);
+    setupLighting(scene, activeLights, setLightsReady);
     setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setTextureLoadStatus);
     loadAllSpacecraftModels(scene, camera, spacecraftsRef, cameraRef, controlsRef);
 

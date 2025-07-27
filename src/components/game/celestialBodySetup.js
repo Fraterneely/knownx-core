@@ -169,6 +169,7 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       let orbitPoints = orbitCurve.getPoints(segments);
       // Close the loop by pushing the first point again
       orbitPoints.push(orbitPoints[0]);
+      
 
       const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
 
@@ -188,7 +189,8 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
         linewidth: 1
       });
 
-      const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
+      const orbitLine = new THREE.LineLoop(orbitGeometry, orbitMaterial);
+
 
       if (body.orbitalInclination) {
         orbitLine.rotation.x = body.orbitalInclination * Math.PI / 180;

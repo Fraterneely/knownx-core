@@ -12,7 +12,8 @@ export const CELESTIAL_BODIES = {
     type: 'star',
     texture: '/textures/sun.jpg',
     emissive: true,
-    emissiveIntensity: 100,
+    emmissiveColor: '0xfff5cc',
+    emissiveIntensity: 100000,
     rotationPeriod: 27 // days
   },
   mercury: {
