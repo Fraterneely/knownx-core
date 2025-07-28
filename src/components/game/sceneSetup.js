@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { CameraSetup } from './cameraSetup';
 
 export function setupScene(mountRef, sceneRef, cameraRef, rendererRef, controlsRef) {
   // Scene setup
@@ -8,13 +9,8 @@ export function setupScene(mountRef, sceneRef, cameraRef, rendererRef, controlsR
   sceneRef.current = scene;
 
   // Camera setup
-  const camera = new THREE.PerspectiveCamera(
-    30,
-    mountRef.current.clientWidth / mountRef.current.clientHeight,
-    0.000001, // Much smaller near plane for viewing tiny objects
-    500000 // Much larger far plane for distant stars
-  );
-  // camera.position.set(0, 2, 10);
+  const cameraSetup = new CameraSetup();
+  const camera = cameraSetup.getCamera();
   cameraRef.current = camera;
 
   // Renderer setup

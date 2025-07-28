@@ -1,7 +1,8 @@
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
-import { Spacecraft } from '../entities/SpaceCraft.js'; // Your physics/simulation engine
+import { Spacecraft } from '../entities/SpaceCraft.js';
 import { SpaceScaler } from '../utils/scaler.js';
+import { ThirdPersonCamera } from '../components/game/cameraSetup.js';
 
 const spacecraftObjects = new Map(); // Map: name -> 3D Object
 const loader = new GLTFLoader();
@@ -12,8 +13,8 @@ const scaler = new SpaceScaler();
  * @param {THREE.Scene} scene - Three.js scene to attach models to.
  * @returns {Promise} - Resolves when all models are loaded.
  */
-export async function loadAllSpacecraftModels(scene, camera, spacecraftRef, cameraRef, controlsRef) {
-  const spacecraftList = Spacecraft.list();
+export async function loadAllSpacecraftModels(scene, camera, spacecraftRef, selectedSpacecraftRef, thirdPersonRef, cameraRef, controlsRef) {
+  const spacecraftList = Spacecraft.list(); 
   console.log("Spacecrafts list found!")
 
   const loadPromises = spacecraftList.map((sc, index) => {
@@ -23,29 +24,27 @@ export async function loadAllSpacecraftModels(scene, camera, spacecraftRef, came
         '/models/spacecrafts/spaceship_low_poly.glb',
         (gltf) => {
           const model = gltf.scene;
-          console.log(`Real Craft size: ${sc.size.x}, ${sc.size.y}, ${sc.size.z}`)
           scaler.scaleMesh(model, sc.size);
-          console.log(`Craft's placed size: ${model.scale.x}, ${model.scale.y}, ${model.scale.z}`)
-          model.rotation.y = Math.PI; // face forward
-          console.log(`Real Craft position ${sc.position.x}, ${sc.position.y}, ${sc.position.z}`)
-          scaler.positionMesh(model, sc.position);
-          console.log(`Craft's placed position ${model.position.x}, ${model.position.y}, ${model.position.z}`)
 
-          scene.add(model);
-          spacecraftObjects.set(sc.name, model);
+          const spacecraft = new THREE.Object3D();
+          spacecraft.add(model);
+
+          model.rotation.y = Math.PI / 2 ; // face forward
+          scaler.positionMesh(spacecraft, sc.position);
+
+          scene.add(spacecraft);
+          spacecraftObjects.set(sc.name, spacecraft);
           spacecraftRef.current = spacecraftObjects;
+          selectedSpacecraftRef.current = spacecraft;
 
           // position camera for the FIRST craft
           if (index === 0) {
-            const offset = scaler.scaleArray([0.05, 0.02, 0.05]); // Behind and above the ship
-            const cameraPosition = model.position.clone().add(offset);
+            thirdPersonRef.current = new ThirdPersonCamera({ 
+              camera: camera,
+              target: selectedSpacecraftRef.current,
+            });
 
-            camera.position.copy(cameraPosition);
-            camera.lookAt(model.position);
-
-            if (cameraRef) cameraRef.current = camera;
-            controlsRef.current?.target.copy(model.position);
-            controlsRef.current?.update();
+            selectedSpacecraftRef.current = spacecraft;
           }
 
           resolve();

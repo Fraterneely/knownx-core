@@ -11,7 +11,7 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
 
     let material;
     if (body.texture) {
-      console.log(`Attempting to load texture for ${body.name}: ${body.texture}`);
+      // console.log(`Attempting to load texture for ${body.name}: ${body.texture}`);
 
       const fallbackMaterial = new THREE.MeshPhongMaterial({
         color: body.color,
@@ -25,7 +25,7 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       const texture = textureLoader.current.load(
         body.texture,
         (loadedTexture) => {
-          console.log(`Successfully loaded texture for ${body.name}`);
+          // console.log(`Successfully loaded texture for ${body.name}`);
           setTextureLoadStatus(prev => ({
             ...prev,
             [key]: 'loaded'
@@ -137,7 +137,7 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       );
       const cloudsTexture = textureLoader.current.load(
         body.clouds.texture,
-        () => console.log(`Successfully loaded cloud texture for ${body.name}`),
+        () => {},
         undefined,
         (error) => console.error(`Failed to load cloud texture for ${body.name}:`, error)
       );

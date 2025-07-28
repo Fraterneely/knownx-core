@@ -233,13 +233,13 @@ export default function SpaceExplorer() {
         )}
 
         {/* Mission Panel */}
-        <div className="pointer-events-auto">
+        {/* <div className="pointer-events-auto">
           <MissionPanel
             onMissionSelect={handleMissionSelect}
             currentMission={currentMission}
             spacecraft={spacecraft}
           />
-        </div>
+        </div> */}
       </div>
     </div>
   );
