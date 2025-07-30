@@ -29,7 +29,7 @@ export async function loadAllSpacecraftModels(scene, camera, spacecraftLists, sp
           const spacecraft = new THREE.Object3D();
           spacecraft.add(model);
 
-          model.rotation.y = Math.PI; // face forward
+          model.rotation.y = Math.PI / 2; // face forward
           scaler.positionMesh(spacecraft, sc.position);
 
           scene.add(spacecraft);

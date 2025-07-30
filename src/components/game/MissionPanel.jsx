@@ -8,7 +8,7 @@ import { Target, Clock, Trophy, AlertCircle, ChevronDown, ChevronUp, PanelRightC
 export default function MissionPanel({ onMissionSelect, currentMission, spacecraft }) {
   const [missions, setMissions] = useState([]);
   const [selectedMission, setSelectedMission] = useState(null);
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {

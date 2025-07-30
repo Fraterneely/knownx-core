@@ -11,9 +11,9 @@ export class CameraSetup {
         console.log("Initializing CameraSetup...");
         this._camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
         console.log(`Camera created with FOV: ${fov}, Aspect: ${aspect}, Near: ${near}, Far: ${far}`);
-        const startPosition = new THREE.Vector3(1.00005, 0.00001, -0.0000808); // place camera a bit near Earth
+        const startPosition = new THREE.Vector3(1.00001, 0.00002, 0.00008); // place camera a bit near Earth
         scaler.positionMesh(this._camera, startPosition);
-        this._camera.lookAt(new THREE.Vector3(0, 0, 0.0009));
+        this._camera.lookAt(scaler.scaleVector(new THREE.Vector3(0.99992, 0.0000099, 0)));
         console.log(`Camera positioned using SpaceScaler at: ${this._camera.position.x}, ${this._camera.position.y}, ${this._camera.position.z} .`);
     }
     getCamera() {

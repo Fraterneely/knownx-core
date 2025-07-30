@@ -111,24 +111,24 @@ export default function SpaceRenderer({
   
       let thrust = new Vector3();
   
-      // Forward/Backward
-      if (keysPressed.has('KeyW')) {
+      // Left/Right
+      if (keysPressed.has('KeyD')) {
           thrust.add(forward);
-          console.log('KeyW pressed. Thrust forward:', forward.toArray());
+          console.log('KeyD pressed. Thrust right:', forward.toArray());
       }
-      if (keysPressed.has('KeyS')) {
+      if (keysPressed.has('KeyA')) {
           thrust.sub(forward);
-          console.log('KeyS pressed. Thrust backward:', forward.toArray());
+          console.log('KeyA pressed. Thrust left:', forward.toArray());
       }
   
-      // Left/Right (Strafe)
-      if (keysPressed.has('KeyA')) {
+      // Forward/Backward
+      if (keysPressed.has('KeyW')) {
           thrust.sub(right);
-          console.log('KeyA pressed. Thrust left:', right.toArray());
+          console.log('KeyW pressed. Thrust forward:', right.toArray());
       }
-      if (keysPressed.has('KeyD')) {
+      if (keysPressed.has('KeyS')) {
           thrust.add(right);
-          console.log('KeyD pressed. Thrust right:', right.toArray());
+          console.log('KeyS pressed. Thrust backward:', right.toArray());
       }
   
       // Up/Down (Lift)
@@ -148,37 +148,52 @@ export default function SpaceRenderer({
     
 
     const animate = () => {
-      const deltaTime = (Date.now() - time);
-      time = Date.now();
+      if (!isPaused) {
+        const currentTime = Date.now()
+        const deltaTime = currentTime - time
+        time = currentTime
 
-      if (selectedSpacecraftRef.current && camera && thirdPersonRef.current && onSpacecraftUpdate) {
-        const ship = selectedSpacecraftRef.current.model;
-        const shipData = selectedSpacecraftRef.current.data;
+        console.log(`DeltaTime from anima: ${deltaTime}`);
 
-        // Handle movement
-        thirdPersonRef.current.Update(timeScale);
+        if(!thirdPersonRef.current){
+          camera.position.y += 0.000001;
+          camera.position.z -= 0.000001
+        }
 
-        // Thrust application
-        // if (!ship || !shipData) return;
-        // const thrustVector = getThrustVectorFromKeys(shipData.orientation);
-        // const updated = applyThrust(shipData, thrustVector, 0.0001, deltaTime);
-        // const moved = updatePosition(updated, deltaTime);
-        // selectedSpacecraftRef.current.data = moved;
+        if (selectedSpacecraftRef.current && camera && thirdPersonRef.current && onSpacecraftUpdate) {
+          const ship = selectedSpacecraftRef.current.model;
+          const shipData = selectedSpacecraftRef.current.data;
+
+          // Handle camera follow
+          thirdPersonRef.current.Update(timeScale);
+
+          ship.position.y += Math.sin(0.00000001);
+          shipData.position.y += Math.sin(0.00000001);
+
+          // Thrust application
+          if (!ship || !shipData) return;
+          const thrustVector = getThrustVectorFromKeys(shipData.orientation);
+          const updated = applyThrust(shipData, thrustVector, 1, deltaTime);
+          const moved = updatePosition(updated, deltaTime);
+          selectedSpacecraftRef.current.data = moved;
+          scaler.positionMesh(ship, new Vector3(moved.position.x, moved.position.y, moved.position.z));
+
+          selectedSpacecraftRef.current.model = ship;
+
+          // onSpacecraftUpdate(moved);
+          onSpacecraftUpdate(selectedSpacecraftRef.current.data);
+        }
+
         
-        // ship.position.set(moved.position.x, moved.position.y, moved.position.z);
 
-        // selectedSpacecraftRef.current.model = ship;
-
-        // onSpacecraftUpdate(moved);
-      }
-
-      camera.aspect = window.innerWidth / window.innerHeight
-      camera.updateProjectionMatrix()
-
-      renderer.setSize(window.innerWidth, window.innerHeight)
-      renderer.render(scene, camera);
-      animationFrameId = requestAnimationFrame(animate);
-    };
+        
+        camera.aspect = window.innerWidth / window.innerHeight
+        camera.updateProjectionMatrix()
+        renderer.setSize(window.innerWidth, window.innerHeight)
+        renderer.render(scene, camera);
+        animationFrameId = requestAnimationFrame(animate);
+      };
+    }
 
     animate();
 

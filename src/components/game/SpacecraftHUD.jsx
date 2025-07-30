@@ -4,6 +4,8 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Fuel, Zap, Wind, MapPin, Clock } from 'lucide-react';
 
+const AU_TO_METERS = 1.496e11; // 1 AU in meters
+
 export default function SpacecraftHUD({ spacecraft, currentMission, gameTime }) {
   const formatNumber = (num) => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';

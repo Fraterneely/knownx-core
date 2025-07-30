@@ -19,7 +19,7 @@ export default function SpaceExplorer() {
   const [gameTime, setGameTime] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showControls, setShowControls] = useState(true);
-  const [showHUD, setShowHUD] = useState(true);
+  const [showHUD, setShowHUD] = useState(false);
   const [gameOverReason, setGameOverReason] = useState(null); // New state
   const spacecraftDataRef = useRef(spacecraft); // Updated initialization as per outline
 
@@ -119,6 +119,7 @@ export default function SpaceExplorer() {
     // This is called on every frame by the physics simulation.
     // It ONLY updates the local state for a smooth UI.
     // The useEffect hook above will handle persisting the data to the database periodically.
+    setShowHUD(true);
     setSpacecraft(updatedSpacecraft);
   };
 
@@ -201,8 +202,6 @@ export default function SpaceExplorer() {
       {/* Game UI Overlay */}
       <div
         className="absolute inset-0 z-1 pointer-events-auto"
-        onMouseEnter={() => setShowHUD(true)}
-        onMouseLeave={() => setShowHUD(true)}
       >
         {showHUD && (
           <SpacecraftHUD
@@ -215,7 +214,7 @@ export default function SpaceExplorer() {
         {/* Control Panel or Toggle Button */}
         {showControls && !gameOverReason ? ( // Hide controls if game over
           <div className="pointer-events-auto">
-            <ControlPanel
+            {showHUD && (<ControlPanel
               spacecraft={spacecraft}
               onSpacecraftUpdate={handleSpacecraftUpdate}
               isPaused={isPaused}
@@ -225,7 +224,7 @@ export default function SpaceExplorer() {
               onTargetChange={handleTargetChange}
               onThrustApply={handleThrustApply}
               setShowControls={setShowControls} // Pass setter to allow ControlPanel to hide itself
-            />
+            />)}
           </div>
         ) : (
           !gameOverReason && ( // Only show toggle button if not game over
