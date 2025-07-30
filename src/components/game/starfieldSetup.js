@@ -6,7 +6,7 @@ export function setupStarfield(scene) {
   const starColors = [];
   const starSizes = [];
 
-  for (let i = 0; i < 20000; i++) {
+  for (let i = 0; i < 100000; i++) {
     const x = (Math.random() - 0.5) * 10000;
     const y = (Math.random() - 0.5) * 10000;
     const z = (Math.random() - 0.5) * 10000;
@@ -25,7 +25,7 @@ export function setupStarfield(scene) {
       starColors.push(1, 1, 1); // White
     }
 
-    starSizes.push(Math.random() * 2 + 0.5);
+    starSizes.push(Math.pow(Math.random(), 2) * 2 + 0.1);
   }
 
   starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
@@ -33,9 +33,10 @@ export function setupStarfield(scene) {
   starGeometry.setAttribute('size', new THREE.Float32BufferAttribute(starSizes, 1));
 
   const starMaterial = new THREE.PointsMaterial({
-    size: 0.05,
+    size: 0.5,
     vertexColors: true,
-    sizeAttenuation: true
+    sizeAttenuation: true,
+    threshold: 0.1
   });
 
   const stars = new THREE.Points(starGeometry, starMaterial);

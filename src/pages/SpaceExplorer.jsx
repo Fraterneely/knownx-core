@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { PanelRightOpen } from 'lucide-react';
 
 export default function SpaceExplorer() {
+  const [spacecraftList, setSpacecraftList] = useState(null);
   const [spacecraft, setSpacecraft] = useState(null);
   const [currentMission, setCurrentMission] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -18,6 +19,7 @@ export default function SpaceExplorer() {
   const [gameTime, setGameTime] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showControls, setShowControls] = useState(true);
+  const [showHUD, setShowHUD] = useState(true);
   const [gameOverReason, setGameOverReason] = useState(null); // New state
   const spacecraftDataRef = useRef(spacecraft); // Updated initialization as per outline
 
@@ -72,6 +74,7 @@ export default function SpaceExplorer() {
         console.log(spacecraftList[0].name); // Imboni-1
         console.log(Spacecraft.schema.properties.fuel.description); // Fuel remaining (kg)
         setSpacecraft(spacecraftList[0]);
+        setSpacecraftList(spacecraftList);
       } else {
         // Create new spacecraft if none exists or if restarting
         const newSpacecraft = await Spacecraft.create({
@@ -187,6 +190,7 @@ export default function SpaceExplorer() {
 
       {/* 3D Space Environment */}
       <SpaceRenderer
+        spacecraftList={spacecraftList}
         onSpacecraftUpdate={handleSpacecraftUpdate}
         targetBody={spacecraft.target_body}
         isPaused={isPaused || !!gameOverReason} // Pause game if game over
@@ -195,12 +199,18 @@ export default function SpaceExplorer() {
       />
 
       {/* Game UI Overlay */}
-      <div className="absolute inset-0 z-1 pointer-events-none">
-        <SpacecraftHUD
-          spacecraft={spacecraft}
-          currentMission={currentMission}
-          gameTime={gameTime}
-        />
+      <div
+        className="absolute inset-0 z-1 pointer-events-auto"
+        onMouseEnter={() => setShowHUD(true)}
+        onMouseLeave={() => setShowHUD(true)}
+      >
+        {showHUD && (
+          <SpacecraftHUD
+            spacecraft={spacecraft}
+            currentMission={currentMission}
+            gameTime={gameTime}
+          />
+        )}
 
         {/* Control Panel or Toggle Button */}
         {showControls && !gameOverReason ? ( // Hide controls if game over
@@ -233,13 +243,13 @@ export default function SpaceExplorer() {
         )}
 
         {/* Mission Panel */}
-        {/* <div className="pointer-events-auto">
+        <div className="pointer-events-auto">
           <MissionPanel
             onMissionSelect={handleMissionSelect}
             currentMission={currentMission}
             spacecraft={spacecraft}
           />
-        </div> */}
+        </div>
       </div>
     </div>
   );

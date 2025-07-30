@@ -11,7 +11,9 @@ export class CameraSetup {
         console.log("Initializing CameraSetup...");
         this._camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
         console.log(`Camera created with FOV: ${fov}, Aspect: ${aspect}, Near: ${near}, Far: ${far}`);
-        scaler.positionMesh(this._camera, new THREE.Vector3(0.000000025, 0.000000010, 0.000000025));
+        const startPosition = new THREE.Vector3(1.00005, 0.00001, -0.0000808); // place camera a bit near Earth
+        scaler.positionMesh(this._camera, startPosition);
+        this._camera.lookAt(new THREE.Vector3(0, 0, 0.0009));
         console.log(`Camera positioned using SpaceScaler at: ${this._camera.position.x}, ${this._camera.position.y}, ${this._camera.position.z} .`);
     }
     getCamera() {
@@ -28,45 +30,23 @@ export class ThirdPersonCamera {
         this.currentLookat = new THREE.Vector3();
         console.log("ThirdPersonCamera initialized with target:", this.params.target);
         
-        console.log(`Target position (Ideal Offset): ${this.params.target.position.toArray()}`);
-        console.log(`Target rotation (Ideal Offset): ${this.params.target.rotation.toArray()}`);
+        console.log(`Target position: ${this.params.target.position.toArray()}`);
+        console.log(`Target rotation: ${this.params.target.rotation.toArray()}`);
     }
     _CalculateIdealOffset() {
-        if (!this.params.target) {
-            console.error("Target is undefined in ThirdPersonCamera");
-            return new THREE.Vector3(); // fallback
-        }
-        if (!this.params.target.position || !this.params.target.rotation) {
-            console.error("Target position or rotation is undefined");
-            return new THREE.Vector3(); // fallback
-        }
-        const idealOffset = scaler.scaleVector(new THREE.Vector3(0.000000010, 0.000000002, 0));
-        const quaternion = new THREE.Quaternion();
-        quaternion.setFromEuler(this.params.target.rotation);
-
-        idealOffset.applyQuaternion(quaternion);
-        idealOffset.add(this.params.target.position);
-        // console.log(`Calculated ideal offset: ${idealOffset.toArray()}`);
-        return idealOffset;
+        const offset = new THREE.Vector3(0.00005, 0.00001, 0); // in AU
+        const q = new THREE.Quaternion().setFromEuler(this.params.target.rotation);
+        offset.applyQuaternion(q);
+        return this.params.target.position.clone().add(offset);
     }
+        
     _CalculateIdealLookat() {
-        if (!this.params.target) {
-            console.error("Target is undefined in ThirdPersonCamera");
-            return new THREE.Vector3(); // fallback
-        }
-        if (!this.params.target.position || !this.params.target.rotation) {
-            console.error("Target position or rotation is undefined");
-            return new THREE.Vector3(); // fallback
-        }
-        const idealLookat = scaler.scaleVector(new THREE.Vector3(0, 0.000000010, 0.000000050));
-        const quaternion = new THREE.Quaternion();
-        quaternion.setFromEuler(this.params.target.rotation);
-
-        idealLookat.applyQuaternion(quaternion);
-        idealLookat.add(this.params.target.position);
-        // console.log(`Calculated ideal lookat: ${idealLookat.toArray()}`);
-        return idealLookat;
+        const look = new THREE.Vector3(0.000003, 0, 0); // in AU
+        const q = new THREE.Quaternion().setFromEuler(this.params.target.rotation);
+        look.applyQuaternion(q);
+        return this.params.target.position.clone().add(look);
     }
+      
     Update(timeElapsed) {
         const idealOffset = this._CalculateIdealOffset();
         const idealLookat = this._CalculateIdealLookat();

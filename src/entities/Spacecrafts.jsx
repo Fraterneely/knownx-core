@@ -13,8 +13,8 @@ const scaler = new SpaceScaler();
  * @param {THREE.Scene} scene - Three.js scene to attach models to.
  * @returns {Promise} - Resolves when all models are loaded.
  */
-export async function loadAllSpacecraftModels(scene, camera, spacecraftRef, selectedSpacecraftRef, thirdPersonRef, cameraRef, controlsRef) {
-  const spacecraftList = Spacecraft.list(); 
+export async function loadAllSpacecraftModels(scene, camera, spacecraftLists, spacecraftRef, selectedSpacecraftRef, thirdPersonRef) {
+  const spacecraftList = spacecraftLists; 
   console.log("Spacecrafts list found!")
 
   const loadPromises = spacecraftList.map((sc, index) => {
@@ -29,22 +29,28 @@ export async function loadAllSpacecraftModels(scene, camera, spacecraftRef, sele
           const spacecraft = new THREE.Object3D();
           spacecraft.add(model);
 
-          model.rotation.y = Math.PI / 2 ; // face forward
+          model.rotation.y = Math.PI; // face forward
           scaler.positionMesh(spacecraft, sc.position);
 
           scene.add(spacecraft);
           spacecraftObjects.set(sc.name, spacecraft);
           spacecraftRef.current = spacecraftObjects;
-          selectedSpacecraftRef.current = spacecraft;
+
+
+          const spacecraftWrapper = {
+            model: spacecraft, // The THREE.Object3D model
+            data: sc // The full Spacecraft object
+          };
 
           // position camera for the FIRST craft
           if (index === 0) {
+            selectedSpacecraftRef.current = spacecraftWrapper;
+
             thirdPersonRef.current = new ThirdPersonCamera({ 
               camera: camera,
-              target: selectedSpacecraftRef.current,
+              target: selectedSpacecraftRef.current.model,
             });
 
-            selectedSpacecraftRef.current = spacecraft;
           }
 
           resolve();
@@ -90,4 +96,14 @@ export function updateSpacecraftModels(updatedSpacecraftList) {
  */
 export function getSpacecraftModel(name) {
   return spacecraftObjects.get(name) || null;
+}
+
+export function applyThrust(sc, thrustVector, thrustLevel, deltaTime){
+  const updated = Spacecraft.applyThrust(sc, thrustVector, thrustLevel, deltaTime);
+  return updated;
+}
+
+export function updatePosition(updated, deltaTime){
+  const moved = Spacecraft.updatePosition(updated, deltaTime);
+  return moved;
 }

@@ -12,16 +12,17 @@ export const Spacecraft = {
     return [
       {
         name: "Imboni-1",
-        position: new Vector3(1, 0.0001, -0.0001),
+        position: new Vector3(1, -0.0000426, 0),
         size: new Vector3(0.0000000267, 0.0000000267, 0.0000000267),
         velocity: { x: 0, y: 0, z: 0 },
-        fuel: 1000,
+        max_speed: 100,
+        fuel: 700,
         max_fuel: 1000,
         oxygen: 500,
         power: 100,
-        thrust: 5000,
+        thrust: 50,
         mass: 1500,
-        target_body: "Sun",
+        target_body: "Venus",
         mission_status: "active",
         orientation: { pitch: 0, yaw: 0, roll: 1 }, // Spacecraft orientation in radians
         thrust_vector: { x: 0, y: 0, z: 0 }, // Current thrust direction
@@ -33,51 +34,65 @@ export const Spacecraft = {
   
   // Apply thrust in a specific direction
   applyThrust: (spacecraft, thrustVector, thrustLevel, deltaTime) => {
-    if (spacecraft.fuel <= 0) return spacecraft; // No fuel, no thrust
+    console.log('Applying thrust for spacecraft:', spacecraft);
+    console.log('Initial fuel level:', spacecraft.fuel);
     
+    if (spacecraft.fuel <= 0) {
+        console.log('No fuel available. Thrust cannot be applied.');
+        return spacecraft; // No fuel, no thrust
+    }
+    
+    if (!thrustVector) {
+        console.log('Invalid thrust vector. Thrust cannot be applied.');
+        return spacecraft;
+    }
     // Normalize thrust vector if it's not zero
     const magnitude = Math.sqrt(
-      thrustVector.x ** 2 + 
-      thrustVector.y ** 2 + 
-      thrustVector.z ** 2
+        thrustVector.x ** 2 + 
+        thrustVector.y ** 2 + 
+        thrustVector.z ** 2
     );
     
     let normalizedVector = { x: 0, y: 0, z: 0 };
     if (magnitude > 0) {
-      normalizedVector = {
-        x: thrustVector.x / magnitude,
-        y: thrustVector.y / magnitude,
-        z: thrustVector.z / magnitude
-      };
+        normalizedVector = {
+            x: thrustVector.x / magnitude,
+            y: thrustVector.y / magnitude,
+            z: thrustVector.z / magnitude
+        };
+        // console.log('Normalized thrust vector:', normalizedVector);
+    } else {
+        // console.log('Thrust vector magnitude is zero, using zero vector for thrust.');
     }
-    
     // Calculate thrust force (N)
     const thrustForce = spacecraft.thrust * thrustLevel;
-    
+    // console.log(`Calculated thrust force: ${thrustForce} N`);
     // Calculate acceleration (m/s²) using F = ma
     const acceleration = {
-      x: (thrustForce * normalizedVector.x) / spacecraft.mass,
-      y: (thrustForce * normalizedVector.y) / spacecraft.mass,
-      z: (thrustForce * normalizedVector.z) / spacecraft.mass
+        x: (thrustForce * normalizedVector.x) / spacecraft.mass,
+        y: (thrustForce * normalizedVector.y) / spacecraft.mass,
+        z: (thrustForce * normalizedVector.z) / spacecraft.mass
     };
-    
+    // console.log('Calculated acceleration:', acceleration);
     // Update velocity (km/s)
     const newVelocity = {
-      x: spacecraft.velocity.x + acceleration.x * deltaTime,
-      y: spacecraft.velocity.y + acceleration.y * deltaTime,
-      z: spacecraft.velocity.z + acceleration.z * deltaTime
+        x: spacecraft.velocity.x + acceleration.x * deltaTime,
+        y: spacecraft.velocity.y + acceleration.y * deltaTime,
+        z: spacecraft.velocity.z + acceleration.z * deltaTime
     };
-    
+    // console.log('New velocity after applying thrust:', newVelocity);
     // Calculate fuel consumption based on thrust level
-    // Higher thrust = higher fuel consumption
     const fuelConsumption = spacecraft.thrust * thrustLevel * 0.0001 * deltaTime;
-    
+    // console.log(`Fuel consumption for this thrust application: ${fuelConsumption}`);
+    // Ensure fuel does not go below zero
+    const updatedFuel = Math.max(0, spacecraft.fuel - fuelConsumption);
+    // console.log('Updated fuel level:', updatedFuel);
     return {
-      ...spacecraft,
-      velocity: newVelocity,
-      fuel: Math.max(0, spacecraft.fuel - fuelConsumption),
-      thrust_vector: normalizedVector,
-      thrust_level: thrustLevel
+        ...spacecraft,
+        velocity: newVelocity,
+        fuel: updatedFuel,
+        thrust_vector: normalizedVector,
+        thrust_level: thrustLevel
     };
   },
   
@@ -112,6 +127,11 @@ export const Spacecraft = {
   
   // Update spacecraft position based on velocity
   updatePosition: (spacecraft, deltaTime) => {
+    // console.log('Updating position for spacecraft:', spacecraft);
+    if (!spacecraft || !spacecraft.position || !spacecraft.velocity){
+      console.error('Invalid spacecraft data for position update');
+      return spacecraft;
+    } 
     return {
       ...spacecraft,
       position: {

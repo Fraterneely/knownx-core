@@ -2,17 +2,22 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { setupScene } from './sceneSetup';
 import { setupLighting } from './lightingSetup';
 import { setupCelestialBodies } from './celestialBodySetup';
-import { TextureLoader } from 'three';
-import { loadAllSpacecraftModels, updateShipControl, updateSpacecraftModels } from '../../entities/Spacecrafts';
+import { TextureLoader, Vector3 } from 'three';
+import { loadAllSpacecraftModels, updatePosition, updateShipControl, updateSpacecraftModels } from '../../entities/Spacecrafts';
 import { SpaceScaler } from '../../utils/scaler';
-import { ThirdPersonCamera } from './cameraSetup';
-import * as THREE from 'three';
 import { setupStarfield } from './starfieldSetup';
+import { applyThrust } from '../../entities/Spacecrafts';
 
 const scaler = new SpaceScaler();
 
+export const useSpacecraftsRef = () => {
+  const spacecraftsRef = useRef([]);
+  return spacecraftsRef;
+};
+
 export default function SpaceRenderer({ 
-  onSpacecraftUpdate, 
+  spacecraftList,
+  onSpacecraftUpdate,
   targetBody,
   isPaused,
   timeScale 
@@ -29,9 +34,9 @@ export default function SpaceRenderer({
   const orbitRefs = useRef({});
   const textureLoader = useRef(new TextureLoader);
   const spacecraftsRef = useRef([]); // spacecraft data here
-  const selectedSpacecraftRef = useRef(null);
+  const selectedSpacecraftRef = useSpacecraftsRef();
   const keysPressed = new Set();
-  const thirdPersonRef = useRef(null);
+  const thirdPersonRef = useRef();
   const [textureLoadStatus, setTextureLoadStatus] = useState({});
   const [sceneReady, setSceneReady] = useState(false);
   const [activeLightsReady, setLightsReady] = useState(false);
@@ -43,12 +48,12 @@ export default function SpaceRenderer({
     setupLighting(scene, activeLights, setLightsReady);
     setupStarfield(scene);
     setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setTextureLoadStatus);
-    loadAllSpacecraftModels(scene, camera, spacecraftsRef, selectedSpacecraftRef, thirdPersonRef, cameraRef, controlsRef);
+    loadAllSpacecraftModels(scene, camera, spacecraftList, spacecraftsRef, selectedSpacecraftRef, thirdPersonRef);
 
     setSceneReady(true);
 
     return () => {
-      controls.dispose();
+      // controls.dispose();
       renderer.dispose();
     };
 
@@ -82,51 +87,91 @@ export default function SpaceRenderer({
     // Focus the window to ensure key events work
     window.focus();
 
+    const getThrustVectorFromKeys = (orientation) => {
+      if (!orientation) {
+          console.log('No orientation provided. Returning zero vector.');
+          return new Vector3();
+      }
+  
+      // Basis vectors based on yaw (for forward/backward and right/left)
+      const forward = new Vector3(
+          -Math.sin(orientation.yaw),
+          0,
+          -Math.cos(orientation.yaw)
+      );
+  
+      const right = new Vector3(
+          Math.cos(orientation.yaw),
+          0,
+          -Math.sin(orientation.yaw)
+      );
+  
+      // Up vector is fixed globally in Y-axis for now
+      const up = new Vector3(0, 1, 0);
+  
+      let thrust = new Vector3();
+  
+      // Forward/Backward
+      if (keysPressed.has('KeyW')) {
+          thrust.add(forward);
+          console.log('KeyW pressed. Thrust forward:', forward.toArray());
+      }
+      if (keysPressed.has('KeyS')) {
+          thrust.sub(forward);
+          console.log('KeyS pressed. Thrust backward:', forward.toArray());
+      }
+  
+      // Left/Right (Strafe)
+      if (keysPressed.has('KeyA')) {
+          thrust.sub(right);
+          console.log('KeyA pressed. Thrust left:', right.toArray());
+      }
+      if (keysPressed.has('KeyD')) {
+          thrust.add(right);
+          console.log('KeyD pressed. Thrust right:', right.toArray());
+      }
+  
+      // Up/Down (Lift)
+      if (keysPressed.has('KeyE')) {
+          thrust.add(up);
+          console.log('KeyE pressed. Thrust up:', up.toArray());
+      }
+      if (keysPressed.has('KeyQ')) {
+          thrust.sub(up);
+          console.log('KeyQ pressed. Thrust down:', up.toArray());
+      }
+  
+      const normalizedThrust = thrust.lengthSq() > 0 ? thrust.normalize() : thrust;
+      return normalizedThrust;
+  };
+  
+    
+
     const animate = () => {
       const deltaTime = (Date.now() - time);
       time = Date.now();
 
-      if (selectedSpacecraftRef.current && camera && controlsRef.current) {
-        const ship = selectedSpacecraftRef.current;
+      if (selectedSpacecraftRef.current && camera && thirdPersonRef.current && onSpacecraftUpdate) {
+        const ship = selectedSpacecraftRef.current.model;
+        const shipData = selectedSpacecraftRef.current.data;
 
         // Handle movement
-        if (keysPressed.has('KeyW')) {
-          ship.position.x -= 0.001; // Forward
-        }
-        if (keysPressed.has('KeyS')) {
-          ship.position.x += 0.001; // Backward
-        }
-        if (keysPressed.has('KeyA')) {
-          ship.rotation.x += 0.001; // Rotate left
-        }
-        if (keysPressed.has('KeyD')) {
-          ship.rotation.x -= 0.001; // Rotate right
-        }
-        if (keysPressed.has('KeyQ')) {
-          ship.rotation.y += 0.001; // Rotate left
-        }
-        if (keysPressed.has('KeyE')) {
-          ship.rotation.y -= 0.001; // Rotate right
-        }
-
-        if (keysPressed.has('ArrowUp')) {
-          ship.position.y += 0.001; // Up
-        }
-        if (keysPressed.has('ArrowDown')) {
-          ship.position.y -= 0.001; // Down
-        }
-        if (keysPressed.has('ArrowLeft')) {
-          ship.position.z -= 0.001; // Left
-        }
-        if (keysPressed.has('ArrowRight')) {
-          ship.position.z += 0.001; // Right
-        }
-
         thirdPersonRef.current.Update(timeScale);
-    
-        controlsRef.current.target.copy(selectedSpacecraftRef.current.position);
-        controlsRef.current.update();
+
+        // Thrust application
+        // if (!ship || !shipData) return;
+        // const thrustVector = getThrustVectorFromKeys(shipData.orientation);
+        // const updated = applyThrust(shipData, thrustVector, 0.0001, deltaTime);
+        // const moved = updatePosition(updated, deltaTime);
+        // selectedSpacecraftRef.current.data = moved;
+        
+        // ship.position.set(moved.position.x, moved.position.y, moved.position.z);
+
+        // selectedSpacecraftRef.current.model = ship;
+
+        // onSpacecraftUpdate(moved);
       }
+
       camera.aspect = window.innerWidth / window.innerHeight
       camera.updateProjectionMatrix()
 
@@ -149,12 +194,25 @@ export default function SpaceRenderer({
   }, [sceneReady]);
 
 
+  // if (!thirdPersonRef.current) {
+  //   return (
+  //     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>
+  //         <div className="text-white text-xl">Waiting for spacecraft...</div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
   return (
     <div 
       ref={mountRef} 
       tabIndex={0}
       className="w-full h-full relative"
       style={{ height: '100vh', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-    ></div>
+    >
+    </div>    
   )
+
+
 }

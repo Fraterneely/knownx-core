@@ -35,15 +35,16 @@ export function setupScene(mountRef, sceneRef, cameraRef, rendererRef, controlsR
 
   // Enhanced controls setup
   if (cameraRef.current && rendererRef.current) {
-    controlsRef.current = new OrbitControls(cameraRef.current, rendererRef.current.domElement);
-    controlsRef.current.enableDamping = true;
-    controlsRef.current.dampingFactor = 0.05;
-    controlsRef.current.screenSpacePanning = false;
-    controlsRef.current.minDistance = 0.0001; // Allow very close approach
-    controlsRef.current.maxDistance = 100000; // Allow very distant viewing
-    controlsRef.current.zoomSpeed = 2; // Faster zoom for large distances
-    controlsRef.current.rotateSpeed = 0.8; // Smoother rotation
-    controlsRef.current.keyPanSpeed = 20; // Faster keyboard panning
+    controlsRef.current = null;
+    // controlsRef.current = new OrbitControls(cameraRef.current, rendererRef.current.domElement);
+    // controlsRef.current.enableDamping = true;
+    // controlsRef.current.dampingFactor = 0.05;
+    // controlsRef.current.screenSpacePanning = false;
+    // controlsRef.current.minDistance = 0.0001; // Allow very close approach
+    // controlsRef.current.maxDistance = 100000; // Allow very distant viewing
+    // controlsRef.current.zoomSpeed = 2; // Faster zoom for large distances
+    // controlsRef.current.rotateSpeed = 0.8; // Smoother rotation
+    // controlsRef.current.keyPanSpeed = 20; // Faster keyboard panning
   }
 
   renderer.render(scene, camera);

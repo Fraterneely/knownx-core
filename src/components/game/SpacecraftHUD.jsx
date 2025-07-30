@@ -94,7 +94,7 @@ export default function SpacecraftHUD({ spacecraft, currentMission, gameTime }) 
       </Card>
 
       {/* Mission Status */}
-      {currentMission && (
+      {/* {currentMission && (
         <Card className="bg-gray-900/90 border-gray-700 text-white backdrop-blur-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -112,14 +112,15 @@ export default function SpacecraftHUD({ spacecraft, currentMission, gameTime }) 
             )}
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       {/* Navigation Info */}
       <Card className="bg-gray-900/90 border-gray-700 text-white backdrop-blur-sm">
         <CardContent className="p-4">
           <h4 className="font-semibold mb-2">Navigation</h4>
           <div className="space-y-1 text-xs">
-            <div>Position: {spacecraft.position.x.toFixed(3)}, {spacecraft.position.y.toFixed(3)}, {spacecraft.position.z.toFixed(3)} AU</div>
+            <div>Position: {spacecraft.position ? `${spacecraft.position.x.toFixed(3)}, ${spacecraft.position.y.toFixed(3)}, ${spacecraft.position.z.toFixed(3)} AU` : 'N/A'}</div>
+            {/* <div>Position: {spacecraft.position.x.toFixed(3)}, {spacecraft.position.y.toFixed(3)}, {spacecraft.position.z.toFixed(3)} AU</div> */}
             <div>Velocity: {Math.sqrt(spacecraft.velocity.x**2 + spacecraft.velocity.y**2 + spacecraft.velocity.z**2).toFixed(2)} km/s</div>
             <div>Mass: {formatNumber(spacecraft.mass)} kg</div>
           </div>
