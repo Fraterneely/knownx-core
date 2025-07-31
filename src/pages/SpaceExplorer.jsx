@@ -9,6 +9,7 @@ import MissionPanel from '../components/game/MissionPanel';
 import GameOverScreen from '../components/game/GameOverScreen';
 import { Button } from '@/components/ui/button';
 import { PanelRightOpen } from 'lucide-react';
+import NavigationMap from '../components/game/NavigationMap';
 
 export default function SpaceExplorer() {
   const [spacecraftList, setSpacecraftList] = useState(null);
@@ -20,6 +21,7 @@ export default function SpaceExplorer() {
   const [isLoading, setIsLoading] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [showHUD, setShowHUD] = useState(false);
+  const [showNavigationMap, setShowNavigationMap] = useState(true);
   const [gameOverReason, setGameOverReason] = useState(null); // New state
   const spacecraftDataRef = useRef(spacecraft); // Updated initialization as per outline
 
@@ -71,10 +73,8 @@ export default function SpaceExplorer() {
       // Try to load existing spacecraft
       const spacecraftList = await Spacecraft.list();
       if (spacecraftList.length > 0 && !isRestart) {
-        console.log(spacecraftList[0].name); // Imboni-1
-        console.log(Spacecraft.schema.properties.fuel.description); // Fuel remaining (kg)
-        setSpacecraft(spacecraftList[0]);
         setSpacecraftList(spacecraftList);
+        setSpacecraft(spacecraftList[0]);
       } else {
         // Create new spacecraft if none exists or if restarting
         const newSpacecraft = await Spacecraft.create({
@@ -249,6 +249,21 @@ export default function SpaceExplorer() {
             spacecraft={spacecraft}
           />
         </div>
+
+        {/* Navigation Map */}
+        {showHUD && showNavigationMap && <NavigationMap spacecraft={spacecraft} />}
+
+        {/* Toggle Navigation Map Button */}
+        {showHUD && <div className="absolute bottom-4 right-4 z-10 pointer-events-auto">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowNavigationMap(!showNavigationMap)}
+            className="bg-gray-900/60 border-gray-700/50 text-gray-300 hover:text-white backdrop-blur-md"
+          >
+            Map
+          </Button>
+        </div>}
       </div>
     </div>
   );

@@ -12,7 +12,7 @@ export const Spacecraft = {
     return [
       {
         name: "Imboni-1",
-        position: new Vector3(0.9999974, 0.0000426, 0),
+        position: new Vector3(0.9999973, 0.0000425, 0),
         size: new Vector3(0.0000000267, 0.0000000267, 0.0000000267),
         velocity: { x: 0, y: 0, z: 0 },
         max_speed: 0.00041666,
@@ -20,8 +20,8 @@ export const Spacecraft = {
         max_fuel: 1000,
         oxygen: 500,
         power: 100,
-        thrust: 5,
-        mass: 10,
+        thrust: 1,
+        mass: 15000,
         target_body: "Venus",
         mission_status: "active",
         orientation: { pitch: 0, yaw: 0, roll: 1 }, // Spacecraft orientation in radians
@@ -71,21 +71,21 @@ export const Spacecraft = {
         y: (thrustForce * normalizedVector.y) / spacecraft.mass,
         z: (thrustForce * normalizedVector.z) / spacecraft.mass
     };
-    console.log('Calculated acceleration:', acceleration);
+    // console.log('Calculated acceleration:', acceleration);
     // Update velocity (km/s)
     const newVelocity = {
         x: spacecraft.velocity.x + acceleration.x * deltaTime,
         y: spacecraft.velocity.y + acceleration.y * deltaTime,
         z: spacecraft.velocity.z + acceleration.z * deltaTime
     };
-    // Update velocity (AU/s)
-    const newVelocityAU = {
-      x: newVelocity.x / AU_TO_METERS,
-      y: newVelocity.y / AU_TO_METERS,
-      z: newVelocity.z / AU_TO_METERS
-    };
-    console.log(`DeltaTime: ${deltaTime}`);
-    console.log('New velocity after applying thrust:', newVelocity, 'in m/s, and:', newVelocityAU, ' in AU');
+    if (newVelocity > spacecraft.max_speed) {
+      newVelocity = {
+        x: spacecraft.max_speed * deltaTime,
+        y: spacecraft.max_speed * deltaTime,
+        z: spacecraft.max_speed * deltaTime
+      };
+    }
+    // console.log('New velocity after applying thrust:', newVelocity);
     // Calculate fuel consumption based on thrust level
     const fuelConsumption = spacecraft.thrust * thrustLevel * 0.0001 * deltaTime;
     // console.log(`Fuel consumption for this thrust application: ${fuelConsumption}`);
@@ -94,7 +94,7 @@ export const Spacecraft = {
     // console.log('Updated fuel level:', updatedFuel);
     return {
         ...spacecraft,
-        velocity: newVelocityAU,
+        velocity: newVelocity,
         fuel: updatedFuel,
         thrust_vector: normalizedVector,
         thrust_level: thrustLevel

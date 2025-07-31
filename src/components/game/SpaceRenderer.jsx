@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { setupScene } from './sceneSetup';
+import { CELESTIAL_BODIES } from '@/entities/CelestialBodies';
 import { setupLighting } from './lightingSetup';
 import { setupCelestialBodies } from './celestialBodySetup';
 import { TextureLoader, Vector3 } from 'three';
@@ -87,7 +88,7 @@ export default function SpaceRenderer({
     // Focus the window to ensure key events work
     window.focus();
 
-    const getThrustVectorFromKeys = (orientation) => {
+    const getThrustVectorFromKeys = (orientation, deltaTime) => {
       if (!orientation) {
           console.log('No orientation provided. Returning zero vector.');
           return new Vector3();
@@ -114,32 +115,49 @@ export default function SpaceRenderer({
       // Left/Right
       if (keysPressed.has('KeyD')) {
           thrust.add(forward);
-          console.log('KeyD pressed. Thrust right:', forward.toArray());
+          // console.log('KeyD pressed. Thrust right:', forward.toArray());
       }
       if (keysPressed.has('KeyA')) {
           thrust.sub(forward);
-          console.log('KeyA pressed. Thrust left:', forward.toArray());
+          // console.log('KeyA pressed. Thrust left:', forward.toArray());
       }
   
       // Forward/Backward
       if (keysPressed.has('KeyW')) {
           thrust.sub(right);
-          console.log('KeyW pressed. Thrust forward:', right.toArray());
+          // console.log('KeyW pressed. Thrust forward:', right.toArray());
       }
       if (keysPressed.has('KeyS')) {
           thrust.add(right);
-          console.log('KeyS pressed. Thrust backward:', right.toArray());
+          // console.log('KeyS pressed. Thrust backward:', right.toArray());
       }
   
       // Up/Down (Lift)
       if (keysPressed.has('KeyE')) {
           thrust.add(up);
-          console.log('KeyE pressed. Thrust up:', up.toArray());
+          // console.log('KeyE pressed. Thrust up:', up.toArray());
       }
       if (keysPressed.has('KeyQ')) {
           thrust.sub(up);
-          console.log('KeyQ pressed. Thrust down:', up.toArray());
+          // console.log('KeyQ pressed. Thrust down:', up.toArray());
       }
+      if (keysPressed.has('ArrowUp')) {
+        selectedSpacecraftRef.current.model.rotation.z += 0.0001 * deltaTime;
+        console.log('ArrowUp pressed. Thrust down:', selectedSpacecraftRef.current.model.rotation.toArray());
+      }
+      if (keysPressed.has('ArrowDown')) {
+        selectedSpacecraftRef.current.model.rotation.z -= 0.0001 * deltaTime;
+        console.log('ArrowDown pressed. Thrust down:', selectedSpacecraftRef.current.model.rotation.toArray());
+      }
+      if (keysPressed.has('ArrowLeft')) {
+        selectedSpacecraftRef.current.model.rotation.x -= 0.0001 * deltaTime;
+        console.log('ArrowDown pressed. Thrust down:', selectedSpacecraftRef.current.model.rotation.toArray());
+      }
+      if (keysPressed.has('ArrowRight')) {
+        selectedSpacecraftRef.current.model.rotation.x += 0.0001 * deltaTime;
+        console.log('ArrowDown pressed. Thrust down:', selectedSpacecraftRef.current.model.rotation.toArray());
+      }
+      
   
       const normalizedThrust = thrust.lengthSq() > 0 ? thrust.normalize() : thrust;
       return normalizedThrust;
@@ -153,12 +171,17 @@ export default function SpaceRenderer({
         const deltaTime = currentTime - time
         time = currentTime
 
-        console.log(`DeltaTime from anima: ${deltaTime}`);
-
         if(!thirdPersonRef.current){
-          camera.position.y += 0.000001;
-          camera.position.z -= 0.000001
+          camera.position.y += 0.000001 * deltaTime;
+          camera.position.z -= 0.0000001 * deltaTime;
+          camera.rotation.y -= 0.00021 * deltaTime
         }
+
+        // if (celestialBodiesRef.current) {
+        //   Object.entries(CELESTIAL_BODIES).forEach(([key, body]) => {
+        //     celestialBodiesRef.current[key].rotation.x -= 0.0000001;
+        //   });
+        // }
 
         if (selectedSpacecraftRef.current && camera && thirdPersonRef.current && onSpacecraftUpdate) {
           const ship = selectedSpacecraftRef.current.model;
@@ -167,19 +190,17 @@ export default function SpaceRenderer({
           // Handle camera follow
           thirdPersonRef.current.Update(timeScale);
 
-          ship.position.y += Math.sin(0.00000001);
-          shipData.position.y += Math.sin(0.00000001);
+          // ship.position.y += Math.sin(0.00000001);
+          // shipData.position.y += Math.sin(0.00000001);
 
           // Thrust application
           if (!ship || !shipData) return;
-          const thrustVector = getThrustVectorFromKeys(shipData.orientation);
-          const updated = applyThrust(shipData, thrustVector, 1, deltaTime);
+          const thrustVector = getThrustVectorFromKeys(shipData.orientation, deltaTime);
+          const updated = applyThrust(shipData, thrustVector, 0.0000001, deltaTime);
           const moved = updatePosition(updated, deltaTime);
           selectedSpacecraftRef.current.data = moved;
-          scaler.positionMesh(ship, new Vector3(moved.position.x, moved.position.y, moved.position.z));
-
-          selectedSpacecraftRef.current.model = ship;
-
+          scaler.positionMesh(ship, new Vector3(selectedSpacecraftRef.current.data.position.x, selectedSpacecraftRef.current.data.position.y, selectedSpacecraftRef.current.data.position.z));
+          
           // onSpacecraftUpdate(moved);
           onSpacecraftUpdate(selectedSpacecraftRef.current.data);
         }

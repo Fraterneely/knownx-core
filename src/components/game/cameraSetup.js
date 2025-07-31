@@ -11,7 +11,7 @@ export class CameraSetup {
         console.log("Initializing CameraSetup...");
         this._camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
         console.log(`Camera created with FOV: ${fov}, Aspect: ${aspect}, Near: ${near}, Far: ${far}`);
-        const startPosition = new THREE.Vector3(1.00001, 0.00002, 0.00008); // place camera a bit near Earth
+        const startPosition = new THREE.Vector3(1.00003, 0.000008, 0.00009); // place camera a bit near Earth
         scaler.positionMesh(this._camera, startPosition);
         this._camera.lookAt(scaler.scaleVector(new THREE.Vector3(0.99992, 0.0000099, 0)));
         console.log(`Camera positioned using SpaceScaler at: ${this._camera.position.x}, ${this._camera.position.y}, ${this._camera.position.z} .`);
@@ -28,13 +28,12 @@ export class ThirdPersonCamera {
         this.camera = params.camera;
         this.currentPosition = new THREE.Vector3();
         this.currentLookat = new THREE.Vector3();
-        console.log("ThirdPersonCamera initialized with target:", this.params.target);
         
-        console.log(`Target position: ${this.params.target.position.toArray()}`);
-        console.log(`Target rotation: ${this.params.target.rotation.toArray()}`);
+        // console.log(`Target position: ${this.params.target.position.toArray()}`);
+        // console.log(`Target rotation: ${this.params.target.rotation.toArray()}`);
     }
     _CalculateIdealOffset() {
-        const offset = new THREE.Vector3(0.00005, 0.00001, 0); // in AU
+        const offset = new THREE.Vector3(0.0002, 0.000055, 0); // in AU
         const q = new THREE.Quaternion().setFromEuler(this.params.target.rotation);
         offset.applyQuaternion(q);
         return this.params.target.position.clone().add(offset);

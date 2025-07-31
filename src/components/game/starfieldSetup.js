@@ -36,7 +36,6 @@ export function setupStarfield(scene) {
     size: 0.5,
     vertexColors: true,
     sizeAttenuation: true,
-    threshold: 0.1
   });
 
   const stars = new THREE.Points(starGeometry, starMaterial);

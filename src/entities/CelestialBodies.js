@@ -12,7 +12,7 @@ export const CELESTIAL_BODIES = {
     type: 'star',
     texture: '/textures/sun.jpg',
     emissive: true,
-    emmissiveColor: '0xfff5cc',
+    emmissiveColor: 'white',
     emissiveIntensity: 100000,
     rotationPeriod: 27 // days
   },
@@ -63,7 +63,8 @@ export const CELESTIAL_BODIES = {
     orbitalEccentricity: 0.017,
     rotationPeriod: 1, // days
     axialTilt: 23.44, // degrees
-    texture: '/textures/earth.jpg',
+    texture: '/textures/earth/earthmap1k.jpg',
+    citylightsTexture: '/textures/earth/earthlights1k.jpg',
     atmosphere: {
       color: '#ADD8E6',
       opacity: 0.3

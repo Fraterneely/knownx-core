@@ -7,7 +7,17 @@ const scaler = new SpaceScaler();
 export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setTextureLoadStatus) {
   Object.entries(CELESTIAL_BODIES).forEach(([key, body]) => {
     const scaleFactor = 1;
-    const geometry = new THREE.SphereGeometry(scaler.scaleValue(body.radius) * scaleFactor, 64, 64);
+    // const geometry = new THREE.SphereGeometry(scaler.scaleValue(body.radius) * scaleFactor, 64, 64);
+    const geometry = new THREE.IcosahedronGeometry(scaler.scaleValue(body.radius) , 12);
+
+    const bodyGroup = new THREE.Group();
+
+    // Axial Tilt
+    if (body.axialTilt) {
+      bodyGroup.rotation.x = body.axialTilt * Math.PI / 180;
+    }
+
+    scene.add(bodyGroup); 
 
     let material;
     if (body.texture) {
@@ -17,13 +27,12 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
         color: body.color,
         emissive: body.type === 'star' ? body.color : 0x000000,
         emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
-        shininess: body.type === 'star' ? 0 : 30
       });
 
 
 
       const texture = textureLoader.current.load(
-        body.texture,
+        body.texture, 
         (loadedTexture) => {
           // console.log(`Successfully loaded texture for ${body.name}`);
           setTextureLoadStatus(prev => ({
@@ -45,12 +54,11 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
         }
       );
 
-      material = new THREE.MeshPhongMaterial({
+      material = new THREE.MeshStandardMaterial({
         map: texture,
         color: body.color,
         emissive: body.type === 'star' ? body.color : 0x000000,
         emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
-        shininess: body.type === 'star' ? 0 : 30
       });
     } else {
       material = new THREE.MeshPhongMaterial({
@@ -61,6 +69,9 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
     }
 
     const mesh = new THREE.Mesh(geometry, material);
+    scaler.positionMesh(mesh, body.position);
+    mesh.userData = { bodyData: body, bodyKey: key };
+    bodyGroup.add(mesh);
 
     // Shadows
     if (NON_SOLID_TYPES.includes(body.type)) {
@@ -71,16 +82,19 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       mesh.receiveShadow = true;
     }
 
-    // Axial Tilt
-    if (body.axialTilt) {
-      mesh.rotation.z = body.axialTilt * Math.PI / 180;
+    // City loghts
+    if (body.citylightsTexture) {
+      const lightsMat = new THREE.MeshBasicMaterial({
+        map: textureLoader.current.load(body.citylightsTexture), 
+        blending: THREE.AdditiveBlending
+      })
+      const citylightsMesh = new THREE.Mesh(geometry, lightsMat);
+      scaler.positionMesh(citylightsMesh, body.position);
+      bodyGroup.add(citylightsMesh);
     }
 
-    // mesh.position.copy(body.position);
-    scaler.positionMesh(mesh, body.position);
-    mesh.userData = { bodyData: body, bodyKey: key };
-
-    scene.add(mesh);
+    
+    
 
     // Glow for stars Add a little pulsating effect
     if (body.type === "star") {
@@ -110,8 +124,9 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
     }
 
     
-    celestialBodiesRef.current[key] = mesh;
+    celestialBodiesRef.current[key] = bodyGroup;
 
+    // Atmosphere
     if (body.atmosphere) {
       const atmosphereGeometry = new THREE.SphereGeometry(
         scaler.scaleValue(body.radius * 1.05),
@@ -129,13 +144,14 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       atmosphereRefs.current[key] = atmosphereMesh;
     }
 
+    // Clouds
     if (body.clouds) {
       const cloudsGeometry = new THREE.SphereGeometry(
         scaler.scaleValue(body.radius * 1.02),
         64,
         64
       );
-      const cloudsTexture = textureLoader.current.load(
+      const cloudsTexture  = textureLoader.current.load(
         body.clouds.texture,
         () => {},
         undefined,
@@ -148,7 +164,8 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
         side: THREE.DoubleSide
       });
       const cloudsMesh = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
-      mesh.add(cloudsMesh);
+      scaler.positionMesh(cloudsMesh, body.position);
+      bodyGroup.add(cloudsMesh);
       cloudsRefs.current[key] = cloudsMesh;
     }
 

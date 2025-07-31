@@ -15,7 +15,6 @@ const scaler = new SpaceScaler();
  */
 export async function loadAllSpacecraftModels(scene, camera, spacecraftLists, spacecraftRef, selectedSpacecraftRef, thirdPersonRef) {
   const spacecraftList = spacecraftLists; 
-  console.log("Spacecrafts list found!")
 
   const loadPromises = spacecraftList.map((sc, index) => {
     return new Promise((resolve, reject) => {
@@ -54,7 +53,6 @@ export async function loadAllSpacecraftModels(scene, camera, spacecraftLists, sp
           }
 
           resolve();
-          console.log(`Spacecraft ${sc.name} resolved successfully!`)
         },
         undefined,
         (err) => {
