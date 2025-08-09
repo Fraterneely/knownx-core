@@ -1,8 +1,9 @@
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Spacecraft } from '../entities/SpaceCraft.js';
 import { SpaceScaler } from '../utils/scaler.js';
 import { ThirdPersonCamera } from '../components/game/cameraSetup.js';
+import { space } from 'postcss/lib/list';
 
 const spacecraftObjects = new Map(); // Map: name -> 3D Object
 const loader = new GLTFLoader();
@@ -13,23 +14,26 @@ const scaler = new SpaceScaler();
  * @param {THREE.Scene} scene - Three.js scene to attach models to.
  * @returns {Promise} - Resolves when all models are loaded.
  */
-export async function loadAllSpacecraftModels(scene, camera, spacecraftLists, spacecraftRef, selectedSpacecraftRef, thirdPersonRef) {
+export async function loadAllSpacecraftModels(scene, camera, spacecraftLists, spacecraftRef, selectedSpacecraftRef, thirdPersonRef, setLoadingProgress) {
   const spacecraftList = spacecraftLists; 
+  console.log('Starting spacecrafts loading ...');
 
   const loadPromises = spacecraftList.map((sc, index) => {
     return new Promise((resolve, reject) => {
       console.log("Found craft named " + sc.name)
+      console.log(`Loading a ${sc.name}'s 3D Model...`);
       loader.load(
         '/models/spacecrafts/spaceship_low_poly.glb',
         (gltf) => {
+          console.log(`Spacecraft ${sc.name}'s 3D Model is loaded successfully`);
           const model = gltf.scene;
           scaler.scaleMesh(model, sc.size);
 
           const spacecraft = new THREE.Object3D();
           spacecraft.add(model);
-
-          model.rotation.y = Math.PI / 2; // face forward
           scaler.positionMesh(spacecraft, sc.position);
+
+          console.log(`Spacecraft ${sc.name} is placed at ${spacecraft.position.toArray()}`);
 
           scene.add(spacecraft);
           spacecraftObjects.set(sc.name, spacecraft);
@@ -40,6 +44,7 @@ export async function loadAllSpacecraftModels(scene, camera, spacecraftLists, sp
             model: spacecraft, // The THREE.Object3D model
             data: sc // The full Spacecraft object
           };
+          console.log(`Spacecraft Wrapper is setted, ${spacecraftWrapper}`);
 
           // position camera for the FIRST craft
           if (index === 0) {
@@ -49,15 +54,41 @@ export async function loadAllSpacecraftModels(scene, camera, spacecraftLists, sp
               camera: camera,
               target: selectedSpacecraftRef.current.model,
             });
+            console.log(`Third Person Camera is setted`);
 
           }
-
+          setLoadingProgress(prev => ({
+            ...prev,
+            models: {
+              ...prev.models,
+              [sc.name]: 'loaded'
+            }
+          }));
           resolve();
         },
-        undefined,
-        (err) => {
-          console.error(`Failed to load model for ${sc.name}`, err);
-          reject(err);
+        (xhr) => {
+          // Progress callback
+          if (setLoadingProgress) {
+            const progress = (xhr.loaded / xhr.total) * 100;
+            setLoadingProgress(prev => ({
+              ...prev,
+              models: {
+                ...prev.models,
+                [sc.name]: progress
+              }
+            }));
+          }
+        },
+        (error) => {
+          console.error(`Error loading model ${sc.name}:`, error);
+          setLoadingProgress(prev => ({
+            ...prev,
+            models: {
+              ...prev.models,
+              [sc.name]: 'failed'
+            }
+          }));
+          reject(error);
         }
       );
     });
@@ -104,4 +135,9 @@ export function applyThrust(sc, thrustVector, thrustLevel, deltaTime){
 export function updatePosition(updated, deltaTime){
   const moved = Spacecraft.updatePosition(updated, deltaTime);
   return moved;
+}
+
+export function updateOrientation(updated, deltaPitch, deltaYaw, deltaRoll){
+  const rotated = Spacecraft.updateOrientation(updated, deltaPitch, deltaYaw, deltaRoll);
+  return rotated;
 }

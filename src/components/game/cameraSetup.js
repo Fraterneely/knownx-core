@@ -33,20 +33,20 @@ export class ThirdPersonCamera {
         // console.log(`Target rotation: ${this.params.target.rotation.toArray()}`);
     }
     _CalculateIdealOffset() {
-        const offset = new THREE.Vector3(0.0002, 0.000055, 0); // in AU
+        const offset = new THREE.Vector3(0, 0.00001, 0.00005);
         const q = new THREE.Quaternion().setFromEuler(this.params.target.rotation);
         offset.applyQuaternion(q);
         return this.params.target.position.clone().add(offset);
     }
         
     _CalculateIdealLookat() {
-        const look = new THREE.Vector3(0.000003, 0, 0); // in AU
+        const look = new THREE.Vector3(0, 0, 0.000003);
         const q = new THREE.Quaternion().setFromEuler(this.params.target.rotation);
         look.applyQuaternion(q);
         return this.params.target.position.clone().add(look);
     }
       
-    Update(timeElapsed) {
+    Update(timeElapsed, deltaTime) {
         const idealOffset = this._CalculateIdealOffset();
         const idealLookat = this._CalculateIdealLookat();
         

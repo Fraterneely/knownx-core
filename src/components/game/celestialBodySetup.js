@@ -4,12 +4,9 @@ import { CELESTIAL_BODIES, NON_SOLID_TYPES } from '../../entities/CelestialBodie
 
 const scaler = new SpaceScaler();
 
-export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setTextureLoadStatus) {
+export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress) {
   Object.entries(CELESTIAL_BODIES).forEach(([key, body]) => {
-    const scaleFactor = 1;
-    // const geometry = new THREE.SphereGeometry(scaler.scaleValue(body.radius) * scaleFactor, 64, 64);
-    const geometry = new THREE.IcosahedronGeometry(scaler.scaleValue(body.radius) , 12);
-
+    const geometry = new THREE.IcosahedronGeometry(scaler.scaleValue(body.radius) , 16);
     const bodyGroup = new THREE.Group();
 
     // Axial Tilt
@@ -21,31 +18,32 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
 
     let material;
     if (body.texture) {
-      // console.log(`Attempting to load texture for ${body.name}: ${body.texture}`);
-
       const fallbackMaterial = new THREE.MeshPhongMaterial({
         color: body.color,
         emissive: body.type === 'star' ? body.color : 0x000000,
         emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
       });
-
-
-
       const texture = textureLoader.current.load(
         body.texture, 
         (loadedTexture) => {
           // console.log(`Successfully loaded texture for ${body.name}`);
-          setTextureLoadStatus(prev => ({
+          setLoadingProgress(prev => ({
             ...prev,
-            [key]: 'loaded'
+            textures: {
+              ...prev.textures,
+              [key]: 'loaded'
+            }
           }));
         },
         undefined,
         (error) => {
           console.error(`Failed to load texture for ${body.name}:`, error);
-          setTextureLoadStatus(prev => ({
+          setLoadingProgress(prev => ({
             ...prev,
-            [key]: 'failed'
+            textures: {
+              ...prev.textures,
+              [key]: 'failed'
+            }
           }));
 
           if (celestialBodiesRef.current[key]) {
@@ -82,10 +80,32 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       mesh.receiveShadow = true;
     }
 
-    // City loghts
+    // City lights
     if (body.citylightsTexture) {
+      const citylightsTexture = textureLoader.current.load(
+        body.citylightsTexture,
+        () => {
+          setLoadingProgress(prev => ({
+            ...prev,
+            citylightsTextures: {
+              ...prev.citylightsTextures,
+              [key]: 'loaded'
+            }
+          }));
+        },
+        undefined,
+        () => {
+          setLoadingProgress(prev => ({
+            ...prev,
+            citylightsTextures: {
+              ...prev.citylightsTextures,
+              [key]: 'failed'
+            }
+          }));
+        }
+      );
       const lightsMat = new THREE.MeshBasicMaterial({
-        map: textureLoader.current.load(body.citylightsTexture), 
+        map: citylightsTexture,
         blending: THREE.AdditiveBlending
       })
       const citylightsMesh = new THREE.Mesh(geometry, lightsMat);
@@ -153,9 +173,26 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       );
       const cloudsTexture  = textureLoader.current.load(
         body.clouds.texture,
-        () => {},
+        () => {
+          setLoadingProgress(prev => ({
+            ...prev,
+            cloudsTextures: {
+              ...prev.cloudsTextures,
+              [key]: 'loaded'
+            }
+          }));
+        },
         undefined,
-        (error) => console.error(`Failed to load cloud texture for ${body.name}:`, error)
+        (error) => {
+          console.error(`Failed to load cloud texture for ${body.name}:`, error);
+          setLoadingProgress(prev => ({
+            ...prev,
+            cloudsTextures: {
+              ...prev.cloudsTextures,
+              [key]: 'failed'
+            }
+          }));
+        }
       );
       const cloudsMaterial = new THREE.MeshPhongMaterial({
         map: cloudsTexture,

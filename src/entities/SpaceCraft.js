@@ -1,5 +1,5 @@
 
-import { Vector3 } from 'three';
+import { Vector3, Quaternion, Euler } from 'three';
 import spacecraftSchema from './SpaceCraft.json';
 
 // Physics constants
@@ -12,9 +12,9 @@ export const Spacecraft = {
     return [
       {
         name: "Imboni-1",
-        position: new Vector3(0.9999973, 0.0000425, 0),
+        position: new Vector3(0.9999973, 0.0000426, 0),
         size: new Vector3(0.0000000267, 0.0000000267, 0.0000000267),
-        velocity: { x: 0, y: 0, z: 0 },
+        velocity: new Vector3(0, 0, 0),
         max_speed: 0.00041666,
         fuel: 700,
         max_fuel: 1000,
@@ -24,16 +24,17 @@ export const Spacecraft = {
         mass: 15000,
         target_body: "Venus",
         mission_status: "active",
-        orientation: { pitch: 0, yaw: 0, roll: 1 }, // Spacecraft orientation in radians
-        thrust_vector: { x: 0, y: 0, z: 0 }, // Current thrust direction
-        thrust_level: 0, // Current thrust level (0-1)
-        autopilot: false, // Autopilot status
+        orientation: new Quaternion().setFromEuler(new Euler(0, 0, 0)), 
+        thrust_vector: new Vector3(0, 0, 0),
+        thrust_level: 0,
+        autopilot: false, 
       }
     ];
   },
   
   // Apply thrust in a specific direction
   applyThrust: (spacecraft, thrustVector, thrustLevel, deltaTime) => {
+    // console.log('applyThrust - Input:', { spacecraft, thrustVector, thrustLevel, deltaTime });
     
     if (spacecraft.fuel <= 0) {
         console.log('No fuel available. Thrust cannot be applied.');
@@ -92,13 +93,15 @@ export const Spacecraft = {
     // Ensure fuel does not go below zero
     const updatedFuel = Math.max(0, spacecraft.fuel - fuelConsumption);
     // console.log('Updated fuel level:', updatedFuel);
-    return {
+    const result = {
         ...spacecraft,
         velocity: newVelocity,
         fuel: updatedFuel,
         thrust_vector: normalizedVector,
         thrust_level: thrustLevel
     };
+    // console.log('applyThrust - Output (velocity, fuel, thrust_vector, thrust_level):', { velocity: result.velocity, fuel: result.fuel, thrust_vector: result.thrust_vector, thrust_level: result.thrust_level });
+    return result;
   },
   
   // Calculate gravitational forces from celestial bodies
@@ -132,19 +135,23 @@ export const Spacecraft = {
   
   // Update spacecraft position based on velocity
   updatePosition: (spacecraft, deltaTime) => {
+    // console.log('updatePosition - Input:', { spacecraft, deltaTime });
     // console.log('Updating position for spacecraft:', spacecraft);
     if (!spacecraft || !spacecraft.position || !spacecraft.velocity){
       console.error('Invalid spacecraft data for position update');
       return spacecraft;
     } 
-    return {
-      ...spacecraft,
-      position: {
-        x: spacecraft.position.x + spacecraft.velocity.x * deltaTime,
-        y: spacecraft.position.y + spacecraft.velocity.y * deltaTime,
-        z: spacecraft.position.z + spacecraft.velocity.z * deltaTime
-      }
+    const newPosition = {
+      x: spacecraft.position.x + spacecraft.velocity.x * deltaTime,
+      y: spacecraft.position.y + spacecraft.velocity.y * deltaTime,
+      z: spacecraft.position.z + spacecraft.velocity.z * deltaTime
     };
+    const result = {
+      ...spacecraft,
+      position: newPosition
+    };
+    // console.log('updatePosition - Output (position):', result.position);
+    return result;
   },
   
   // Update spacecraft systems (oxygen, power, etc.)
@@ -163,24 +170,19 @@ export const Spacecraft = {
       power: Math.max(0, spacecraft.power - powerConsumption - (thrustPowerFactor * deltaTime))
     };
   },
+
+  updateOrientation: (spacecraft, deltaPitch, deltaYaw, deltaRoll) => {
+    // console.log('updateOrientation - Input:', { spacecraft, deltaPitch, deltaYaw, deltaRoll });
+    const deltaQuat = new Quaternion().setFromEuler(new Euler(deltaPitch, deltaYaw, deltaRoll, 'YXZ'));
   
-  // Update orientation based on delta pitch and delta yaw
-  updateOrientation: (spacecraft, deltaPitch, deltaYaw) => {
-    let { pitch, yaw, roll } = spacecraft.orientation;
-
-    pitch += deltaPitch;
-    yaw += deltaYaw;
-
-    // Clamp pitch to prevent flipping (e.g., -PI/2 to PI/2)
-    pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
-
-    // Keep yaw within 0 to 2*PI
-    yaw = (yaw + 2 * Math.PI) % (2 * Math.PI);
-
-    return {
+    const newOrientation = spacecraft.orientation.clone().multiply(deltaQuat).normalize();
+  
+    const result = {
       ...spacecraft,
-      orientation: { pitch, yaw, roll }
+      orientation: newOrientation
     };
+    // console.log('updateOrientation - Output (orientation):', result.orientation);
+    return result;
   },
   
   // Autopilot function to navigate to a target body

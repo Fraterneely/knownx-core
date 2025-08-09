@@ -71,11 +71,12 @@ export default function SpaceExplorer() {
       }
 
       // Try to load existing spacecraft
-      const spacecraftList = await Spacecraft.list();
-      if (spacecraftList.length > 0 && !isRestart) {
-        setSpacecraftList(spacecraftList);
-        setSpacecraft(spacecraftList[0]);
+      const fetchedSpacecraftList = await Spacecraft.list();
+      if (fetchedSpacecraftList.length > 0 && !isRestart) {
+        setSpacecraftList(fetchedSpacecraftList);
+        setSpacecraft(fetchedSpacecraftList[0]);
       } else {
+        setSpacecraftList([]); // Ensure spacecraftList is an array even if empty
         // Create new spacecraft if none exists or if restarting
         const newSpacecraft = await Spacecraft.create({
           name: "Imboni-1",
@@ -251,7 +252,7 @@ export default function SpaceExplorer() {
         </div>
 
         {/* Navigation Map */}
-        {showHUD && showNavigationMap && <NavigationMap spacecraft={spacecraft} />}
+        {/* {showHUD && showNavigationMap && <NavigationMap spacecraft={spacecraft} />} */}
 
         {/* Toggle Navigation Map Button */}
         {showHUD && <div className="absolute bottom-4 right-4 z-10 pointer-events-auto">
