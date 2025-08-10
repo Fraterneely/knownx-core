@@ -64,6 +64,8 @@ export const CELESTIAL_BODIES = {
     rotationPeriod: 1, // days
     axialTilt: 23.44, // degrees
     texture: '/textures/earth/earthmap1k.jpg',
+    normalMap: '/textures/earth/earthmap1k.jpg',
+    bumpMap: '/textures/earth/earthbump1k.jpg',
     citylightsTexture: '/textures/earth/earthlights4k.png',
     atmosphere: {
       color: '#ADD8E6',

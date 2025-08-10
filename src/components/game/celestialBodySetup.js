@@ -17,12 +17,14 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
     scene.add(bodyGroup); 
 
     let material;
+
+    const fallbackMaterial = new THREE.MeshPhongMaterial({
+      color: body.color,
+      emissive: body.type === 'star' ? body.color : 0x000000,
+      emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
+    });
+
     if (body.texture) {
-      const fallbackMaterial = new THREE.MeshPhongMaterial({
-        color: body.color,
-        emissive: body.type === 'star' ? body.color : 0x000000,
-        emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
-      });
       const texture = textureLoader.current.load(
         body.texture, 
         (loadedTexture) => {
@@ -52,12 +54,27 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
         }
       );
 
-      material = new THREE.MeshStandardMaterial({
-        map: texture,
-        color: body.color,
-        emissive: body.type === 'star' ? body.color : 0x000000,
-        emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
-      });
+      if (body.normalMap && body.bumpMap) {
+        const normalMap = textureLoader.current.load(body.normalMap);
+        const bumpMap = textureLoader.current.load(body.bumpMap);
+
+        material = new THREE.MeshStandardMaterial({
+          map: texture,
+          // normalMap: normalMap,
+          bumpMap: bumpMap,
+          bumpScale: 0.5,
+          color: body.color,
+          emissive: body.type === 'star' ? body.color : 0x000000,
+          emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
+        });
+      } else{
+        material = new THREE.MeshStandardMaterial({
+          map: texture,
+          color: body.color,
+          emissive: body.type === 'star' ? body.color : 0x000000,
+          emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
+        });
+      }
     } else {
       material = new THREE.MeshPhongMaterial({
         color: body.color,

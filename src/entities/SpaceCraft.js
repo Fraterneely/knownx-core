@@ -13,7 +13,7 @@ export const Spacecraft = {
       {
         name: "Imboni-1",
         position: new Vector3(0.9999973, 0.0000426, 0),
-        size: new Vector3(0.0000000267, 0.0000000267, 0.0000000267),
+        size: new Vector3(0.00000000267, 0.00000000267, 0.00000000267),
         velocity: new Vector3(0, 0, 0),
         max_speed: 0.00041666,
         fuel: 700,

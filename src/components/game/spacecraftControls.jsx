@@ -3,6 +3,7 @@ import { Vector3 } from 'three';
 export const keysPressed = new Set();
 
 export const handleKeyDown = (e) => {
+  console.log(`${e.code} is Pressed`);
   keysPressed.add(e.code);
   const handledKeys = [
     'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE',
@@ -40,7 +41,7 @@ export const getThrustVectorFromKeys = (orientationQuat) => {
   return thrust.lengthSq() > 0 ? thrust.normalize() : thrust;
 };
 
-export const getRotationDeltaFromKeys = (rotationSpeed = 0.1) => {
+export const getRotationDeltaFromKeys = (rotationSpeed = 0.01) => {
   let deltaPitch = 0;
   let deltaYaw = 0;
   let deltaRoll = 0;

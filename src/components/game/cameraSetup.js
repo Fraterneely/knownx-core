@@ -46,7 +46,7 @@ export class ThirdPersonCamera {
         return this.params.target.position.clone().add(look);
     }
       
-    Update(timeElapsed, deltaTime) {
+    Update(timeElapsed) {
         const idealOffset = this._CalculateIdealOffset();
         const idealLookat = this._CalculateIdealLookat();
         
