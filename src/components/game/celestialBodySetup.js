@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { SpaceScaler } from '../../utils/scaler';
 import { CELESTIAL_BODIES, NON_SOLID_TYPES } from '../../entities/CelestialBodies';
+import * as CANNON from 'cannon-es';
 
 const scaler = new SpaceScaler();
 
-export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress) {
+export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, world, setLoadingProgress ) {
   Object.entries(CELESTIAL_BODIES).forEach(([key, body]) => {
     const geometry = new THREE.IcosahedronGeometry(scaler.scaleValue(body.radius) , 16);
     const bodyGroup = new THREE.Group();
@@ -14,7 +15,7 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       bodyGroup.rotation.x = body.axialTilt * Math.PI / 180;
     }
 
-    scene.add(bodyGroup); 
+    // scene.add(bodyGroup); 
 
     let material;
 
@@ -60,9 +61,9 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
 
         material = new THREE.MeshStandardMaterial({
           map: texture,
-          // normalMap: normalMap,
+          normalMap: normalMap,
           bumpMap: bumpMap,
-          bumpScale: 0.5,
+          bumpScale: 1,
           color: body.color,
           emissive: body.type === 'star' ? body.color : 0x000000,
           emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
@@ -87,6 +88,14 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
     scaler.positionMesh(mesh, body.position);
     mesh.userData = { bodyData: body, bodyKey: key };
     bodyGroup.add(mesh);
+
+    // Create Cannon.js body for celestial body
+    const cannonBody = new CANNON.Body({
+      mass: body.mass || 0, // Set mass to 0 for static bodies like stars and planets
+      shape: new CANNON.Sphere(scaler.scaleValue(body.radius)),
+      position: new CANNON.Vec3(mesh.position.x, mesh.position.y, mesh.position.z)
+    });
+    world.addBody(cannonBody);
 
     // Shadows
     if (NON_SOLID_TYPES.includes(body.type)) {
@@ -161,7 +170,10 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
     }
 
     
-    celestialBodiesRef.current[key] = bodyGroup;
+    celestialBodiesRef.current[key] = {
+      mesh: bodyGroup,
+      body: cannonBody
+    };
 
     // Atmosphere
     if (body.atmosphere) {

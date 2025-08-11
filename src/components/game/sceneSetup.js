@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { CameraSetup } from './cameraSetup';
 
 export function setupScene(mountRef) {
@@ -15,7 +14,7 @@ export function setupScene(mountRef) {
     'bkg1_right.png',
     'bkg1_left.png', 
     'bkg1_top.png',
-    'bkg1_bottom.png',
+    'bkg1_bot.png',
     'bkg1_front.png',
     'bkg1_back.png'
   ];
@@ -55,6 +54,7 @@ export function setupScene(mountRef) {
     logarithmicDepthBuffer: true,
     preserveDrawingBuffer: true
   });
+  renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
 
   // Clear any existing canvas elements before adding a new one
@@ -64,20 +64,5 @@ export function setupScene(mountRef) {
 
   mountRef.current.appendChild(renderer.domElement);
 
-  // Enhanced controls setup
-  const controls = null;
-  // if (camera && renderer) {
-  //   const controls = null;
-  //   // controlsRef.current = new OrbitControls(camera, renderer.domElement);
-  //   // controlsRef.current.enableDamping = true;
-  //   // controlsRef.current.dampingFactor = 0.05;
-  //   // controlsRef.current.screenSpacePanning = false;
-  //   // controlsRef.current.minDistance = 0.0001; // Allow very close approach
-  //   // controlsRef.current.maxDistance = 100000; // Allow very distant viewing
-  //   // controlsRef.current.zoomSpeed = 2; // Faster zoom for large distances
-  //   // controlsRef.current.rotateSpeed = 0.8; // Smoother rotation
-  //   // controlsRef.current.keyPanSpeed = 20; // Faster keyboard panning
-  // }
-
-  return { scene, camera, renderer, audioLoader, sound, controls };
+  return { scene, camera, renderer, audioLoader, sound };
 }

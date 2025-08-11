@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
+import CannonDebugger from 'cannon-es-debugger';
 
 // Gravitational Constant (real value, for accurate physics simulation)
 export const G = 6.67430e-11; // m^3 kg^-1 s^-2
@@ -12,6 +13,21 @@ export const G = 6.67430e-11; // m^3 kg^-1 s^-2
  * @param {number} body2Mass - Mass of the second body.
  * @returns {THREE.Vector3} The gravitational force vector.
  */
+
+export function initCannonWorld (scene){
+    const world = new CANNON.World();
+    world.gravity.set(0, 0, 0); // No global gravity, handled by custom forces
+    world.broadphase = new CANNON.SAPBroadphase(world);
+    world.allowSleep = true;
+
+    const cannonDebugger = new CannonDebugger(scene, world, {
+        color: 0xffffff,
+        lineWidth: 10,
+    });
+
+    return {world, cannonDebugger};
+};
+
 export function calculateGravitationalForce(body1Position, body1Mass, body2Position, body2Mass) {
     const direction = new THREE.Vector3().subVectors(body2Position, body1Position);
     const distance = direction.length();
