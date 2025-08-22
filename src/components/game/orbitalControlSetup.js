@@ -5,7 +5,7 @@ export function setupOrbitControls(camera, renderer) {
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
   controls.screenSpacePanning = false;
-  controls.minDistance = 0.0001;
-  controls.maxDistance = 5000000;
+  controls.minDistance = 0.000001;
+  controls.maxDistance = 0.000005;
   return controls;
 }

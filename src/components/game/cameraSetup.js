@@ -10,14 +10,11 @@ export class CameraSetup {
     constructor() {
         console.log("Initializing CameraSetup...");
         this._camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-        console.log(`Camera created with FOV: ${fov}, Aspect: ${aspect}, Near: ${near}, Far: ${far}`);
         const startPosition = new THREE.Vector3(1.00003, 0.000008, 0.00009); // place camera a bit near Earth
         scaler.positionMesh(this._camera, startPosition);
         this._camera.lookAt(scaler.scaleVector(new THREE.Vector3(0.99992, 0.0000099, 0)));
-        console.log(`Camera positioned using SpaceScaler at: ${this._camera.position.x}, ${this._camera.position.y}, ${this._camera.position.z} .`);
     }
     getCamera() {
-        console.log(`Getting camera instance...`);
         return this._camera;
     }
 }
@@ -29,12 +26,14 @@ export class ThirdPersonCamera {
         this.currentPosition = new THREE.Vector3();
         this.currentLookat = new THREE.Vector3();
         
-        // console.log(`Target position: ${this.params.target.position.toArray()}`);
-        // console.log(`Target rotation: ${this.params.target.rotation.toArray()}`);
+        console.log(`Target position: ${this.params.target.position.toArray()}`);
+        console.log(`Target rotation: ${this.params.target.quaternion.toArray()}`);
     }
     _CalculateIdealOffset() {
-        const offset = new THREE.Vector3(0, 0.00002, 0.00006);
+        const offset = new THREE.Vector3(0, 0.000002, 0.000005);
+        // console.log(`Target Rotaion: ${this.params.target.rotation.toArray()}`);
         const q = new THREE.Quaternion().setFromEuler(this.params.target.rotation);
+        // console.log(`Target Quaternion: ${q.toArray()}`);
         offset.applyQuaternion(q);
         return this.params.target.position.clone().add(offset);
     }
@@ -47,6 +46,8 @@ export class ThirdPersonCamera {
     }
       
     Update(timeElapsed) {
+        // console.log(`Updating camera position and orientation from: ${this.camera.position.toArray()}, for taget (POS): ${this.params.target.position.toArray()}`);
+        // console.log(`Updating camera position and orientation from: ${this.camera.rotation.toArray()}, for taget (ROTATION): ${this.params.target.rotation.toArray()}`);
         const idealOffset = this._CalculateIdealOffset();
         const idealLookat = this._CalculateIdealLookat();
         

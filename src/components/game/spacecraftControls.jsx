@@ -41,7 +41,7 @@ export const getThrustVectorFromKeys = (orientationQuat) => {
   return thrust.lengthSq() > 0 ? thrust.normalize() : thrust;
 };
 
-export const getRotationDeltaFromKeys = (rotationSpeed = 0.01) => {
+export const getRotationDeltaFromKeys = (rotationSpeed = 1) => {
   let deltaPitch = 0;
   let deltaYaw = 0;
   let deltaRoll = 0;

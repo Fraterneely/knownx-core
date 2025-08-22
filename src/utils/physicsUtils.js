@@ -1,9 +1,13 @@
-import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import CannonDebugger from 'cannon-es-debugger';
 
 // Gravitational Constant (real value, for accurate physics simulation)
-export const G = 6.67430e-11; // m^3 kg^-1 s^-2
+export const G = 6.67408e-11; // m^3 kg^-1 s^-2
+export const AU_TO_METERS = 1.49598e11; // 1 AU in meters
+
+export function toMeters(vAU) {
+  return vAU.clone().multiplyScalar(AU_TO_METERS);
+}
 
 /**
  * Calculates the gravitational force between two celestial bodies.
@@ -17,28 +21,73 @@ export const G = 6.67430e-11; // m^3 kg^-1 s^-2
 export function initCannonWorld (scene){
     const world = new CANNON.World();
     world.gravity.set(0, 0, 0); // No global gravity, handled by custom forces
-    world.broadphase = new CANNON.SAPBroadphase(world);
-    world.allowSleep = true;
+    world.solver.iterations = 20;
+    world.solver.tolerance = 0.001;
+    world.defaultContactMaterial.contactEquationStiffness = 1e9;
+    world.defaultContactMaterial.contactEquationRelaxation = 3;
+
+    const celestialBodiesMaterail = new CANNON.Material("celestialBodiesMaterail");
+    const spacecraftsMaterial = new CANNON.Material("spacecraftsMaterial");
+    const contactMaterial = new CANNON.ContactMaterial(celestialBodiesMaterail, spacecraftsMaterial, {
+        friction: 0.5,
+        restitution: 0
+    });
+    world.addContactMaterial(contactMaterial);
 
     const cannonDebugger = new CannonDebugger(scene, world, {
         color: 0xffffff,
         lineWidth: 10,
     });
 
-    return {world, cannonDebugger};
+    return {world, cannonDebugger, celestialBodiesMaterail, spacecraftsMaterial};
 };
 
-export function calculateGravitationalForce(body1Position, body1Mass, body2Position, body2Mass) {
-    const direction = new THREE.Vector3().subVectors(body2Position, body1Position);
-    const distance = direction.length();
+export function gravitationalForce(body1PosAU, m1, body2PosAU, m2) {
+  const p1 = toMeters(body1PosAU);
+  const p2 = toMeters(body2PosAU);
 
-    // Avoid division by zero or extremely large forces at very close distances
-    // Using a small epsilon to prevent numerical instability
-    const minDistance = 0.1; 
-    if (distance < minDistance) return new THREE.Vector3(); 
+  const rVec = p2.clone().sub(p1);          // meters
+//   console.log(`rVec: (${rVec.toArray()})`);
+  const r = rVec.length();
+//   console.log(`r: ${r}`);
+  if (r === 0) return rVec.set(0,0,0);
 
-    const forceMagnitude = (G * body1Mass * body2Mass) / (distance * distance);
-    return direction.normalize().multiplyScalar(forceMagnitude);
+  const dir = rVec.clone().divideScalar(r); // unitless
+//   console.log(`direction: ${dir.toArray()}`);
+  const mag = G * m1 * m2 / (r*r);          // newtons
+//   console.log(`Force Mag: ${mag}`);
+  return dir.multiplyScalar(mag);           // N vector on body1
+}
+
+/**
+ * Calculates the thrust force based on a given direction and magnitude.
+ * @param {THREE.Vector3} direction - The direction of the thrust.
+ * @param {number} magnitude - The magnitude of the thrust.
+ * @returns {THREE.Vector3} The thrust force vector.
+ */
+export function applyOrbitalForces(celestialBodiesRef) {
+  const bodyNames = Object.keys(celestialBodiesRef.current);
+  for (let i = 0; i < bodyNames.length; i++) {
+    const bodyName1 = bodyNames[i];
+    const body1 = celestialBodiesRef.current[bodyName1];
+
+    for (let j = i + 1; j < bodyNames.length; j++) { // Iterate over unique pairs
+      const bodyName2 = bodyNames[j];
+      const body2 = celestialBodiesRef.current[bodyName2];
+
+      if (body1.bodyBody && body1.bodyData && body2.bodyBody && body2.bodyData) {
+        const force = gravitationalForce(
+          body1.bodyData.position,
+          body1.bodyData.mass,
+          body2.bodyData.position,
+          body2.bodyData.mass
+        );
+        const cannonForce = new CANNON.Vec3(force.x, force.y, force.z);
+        body1.bodyBody.applyForce(cannonForce); // Apply force to body1
+        body2.bodyBody.applyForce(cannonForce.scale(-1)); // Apply equal and opposite force to body2
+      }
+    }
+  }
 }
 
 /**

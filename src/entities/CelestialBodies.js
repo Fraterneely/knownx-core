@@ -6,9 +6,9 @@ export const CELESTIAL_BODIES = {
   sun: {
     name: 'Sun',
     position: new THREE.Vector3(0, 0, 0),
-    radius: 0.00465, // AU
+    radius: 465.47454e-5, // AU
     color: '#FDB813',
-    mass: 1.989e30,
+    mass: 0,
     type: 'star',
     texture: '/textures/sun.jpg',
     emissive: true,
@@ -19,7 +19,7 @@ export const CELESTIAL_BODIES = {
   mercury: {
     name: 'Mercury',
     position: new Vector3(0.39, 0, 0),
-    radius: 0.0000166, // AU
+    radius: 1.63083872e-5, // AU
     color: '#A5A5A5',
     mass: 3.3011e23,
     type: 'planet',
@@ -34,7 +34,7 @@ export const CELESTIAL_BODIES = {
   venus: {
     name: 'Venus',
     position: new Vector3(0.72, 0, 0),
-    radius: 0.0000406, // AU
+    radius: 4.04537843e-5, // AU
     color: '#E6E6FA',
     mass: 4.8675e24,
     type: 'planet',
@@ -53,9 +53,9 @@ export const CELESTIAL_BODIES = {
   earth: {
     name: 'Earth',
     position: new Vector3(1, 0, 0),
-    radius: 0.0000426, // AU
+    radius: 4.26343e-5, // AU
     color: '#6B93D6',
-    mass: 5.972e24,
+    mass: 590000000000,
     type: 'planet',
     orbitalRadius: 1,
     orbitalPeriod: 365.25,
@@ -64,9 +64,9 @@ export const CELESTIAL_BODIES = {
     rotationPeriod: 1, // days
     axialTilt: 23.44, // degrees
     texture: '/textures/earth/earthmap1k.jpg',
-    normalMap: '/textures/earth/earth-normal-8k.png',
-    bumpMap: '/textures/earth/earthbump1k.jpg',
-    citylightsTexture: '/textures/earth/earthlights4k.png',
+    // normalMap: '/textures/earth/earth-normal-8k.png',
+    // bumpMap: '/textures/earth/earthbump1k.jpg',
+    // citylightsTexture: '/textures/earth/earthlights4k.png',
     atmosphere: {
       color: '#ADD8E6',
       opacity: 0.3
@@ -79,7 +79,7 @@ export const CELESTIAL_BODIES = {
   moon: {
     name: 'Moon',
     position: new Vector3(1.00257, 0, 0),
-    radius: 0.0000116, // AU
+    radius: 1.16138017e-5, // AU
     color: '#C0C0C0',
     mass: 7.342e22,
     type: 'moon',
@@ -95,7 +95,7 @@ export const CELESTIAL_BODIES = {
   mars: {
     name: 'Mars',
     position: new Vector3(1.52, 0, 0),
-    radius: 0.0000227, // AU
+    radius: 2.26574081e-5, // AU
     color: '#CD5C5C',
     mass: 6.39e23,
     type: 'planet',
@@ -114,7 +114,7 @@ export const CELESTIAL_BODIES = {
   jupiter: {
     name: 'Jupiter',
     position: new Vector3 (5.2, 0, 0),
-    radius: 0.000467, // AU
+    radius: 4.6732617e-5, // AU
     color: '#D8CA9D',
     mass: 1.898e27,
     type: 'planet',
@@ -126,18 +126,36 @@ export const CELESTIAL_BODIES = {
     axialTilt: 3.13, // degrees
     texture: '/textures/jupiter.jpg'
   },
-  proximaCentauri: {
-    name: 'Proxima Centauri',
-    position: new Vector3(268000, 0, 0),
-    radius: 0.000007, // AU
-    color: '#FF6B6B',
-    mass: 2.428e29,
-    type: 'star',
-    texture: '/textures/proxima.jpg',
-    emissive: true,
-    emissiveIntensity: 0.4,
-    rotationPeriod: 83 // days
-  }
+  neptune: {
+    name: 'Neptune',
+    position: new Vector3(30.1, 0, 0),
+    radius: 16.4766e-5, // AU
+    color: '#5B5BE0',
+    mass: 1.024e26,
+    type: 'planet',
+    orbitalRadius: 30.1,
+    orbitalPeriod: 60190,
+    orbitalInclination: 1.77, // degrees
+    orbitalEccentricity: 0.0086,
+    rotationPeriod: 0.67, // days
+    axialTilt: 28.32, // degrees
+    texture: '/textures/neptune.jpg'
+  },
+  uranus: {
+    name: 'Uranus',
+    position: new Vector3(19.2, 0, 0),
+    radius: 16.9534499e-5, // AU
+    color: '#C1E1C1',
+    mass: 8.681e25,
+    type: 'planet',
+    orbitalRadius: 19.2,
+    orbitalPeriod: 30687,
+    orbitalInclination: 0.77, // degrees
+    orbitalEccentricity: 0.047,
+    rotationPeriod: 0.72, // days
+    axialTilt: 97.77, // degrees
+    texture: '/textures/uranus.jpg'
+  },
 };
 
 export const NON_SOLID_TYPES = ["star", "blackhole", "nebula", "accretiondisk"];

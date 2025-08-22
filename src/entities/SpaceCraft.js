@@ -1,10 +1,7 @@
 
 import { Vector3, Quaternion, Euler } from 'three';
 import spacecraftSchema from './SpaceCraft.json';
-
-// Physics constants
-const G = 6.67430e-11; // Gravitational constant
-const AU_TO_METERS = 1.496e11; // 1 AU in meters
+import { G, AU_TO_METERS } from '../utils/physicsUtils';
 
 export const Spacecraft = {
   list: () => {
@@ -12,7 +9,7 @@ export const Spacecraft = {
     return [
       {
         name: "Imboni-1",
-        position: new Vector3(0.9999973, 0.0000426, 0),
+        position: new Vector3(0.99991, 0, 0),
         size: new Vector3(0.00000000267, 0.00000000267, 0.00000000267),
         velocity: new Vector3(0, 0, 0),
         max_speed: 0.00041666,
@@ -21,7 +18,7 @@ export const Spacecraft = {
         oxygen: 500,
         power: 100,
         thrust: 1,
-        mass: 15000,
+        mass: 1,
         target_body: "Venus",
         mission_status: "active",
         orientation: new Quaternion().setFromEuler(new Euler(0, 0, 0)), 
@@ -135,17 +132,16 @@ export const Spacecraft = {
   
   // Update spacecraft position based on velocity
   updatePosition: (spacecraft, deltaTime) => {
-    // console.log('updatePosition - Input:', { spacecraft, deltaTime });
     // console.log('Updating position for spacecraft:', spacecraft);
     if (!spacecraft || !spacecraft.position || !spacecraft.velocity){
       console.error('Invalid spacecraft data for position update');
       return spacecraft;
     } 
-    const newPosition = {
-      x: spacecraft.position.x + spacecraft.velocity.x * deltaTime,
-      y: spacecraft.position.y + spacecraft.velocity.y * deltaTime,
-      z: spacecraft.position.z + spacecraft.velocity.z * deltaTime
-    };
+    const newPosition = new Vector3(
+      spacecraft.position.x,
+      spacecraft.position.y,
+      spacecraft.position.z
+    );
     const result = {
       ...spacecraft,
       position: newPosition
@@ -173,7 +169,7 @@ export const Spacecraft = {
 
   updateOrientation: (spacecraft, deltaPitch, deltaYaw, deltaRoll) => {
     // console.log('updateOrientation - Input:', { spacecraft, deltaPitch, deltaYaw, deltaRoll });
-    const deltaQuat = new Quaternion().setFromEuler(new Euler(deltaPitch, deltaYaw, deltaRoll, 'YXZ'));
+    const deltaQuat = new Quaternion().setFromEuler(new Euler(deltaPitch, deltaYaw, deltaRoll, 'XYZ'));
   
     const newOrientation = spacecraft.orientation.clone().multiply(deltaQuat).normalize();
   

@@ -5,7 +5,7 @@ import * as CANNON from 'cannon-es';
 
 const scaler = new SpaceScaler();
 
-export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, world, setLoadingProgress ) {
+export function setupCelestialBodies(world, scene, camera, celestialBodiesMaterail, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress ) {
   Object.entries(CELESTIAL_BODIES).forEach(([key, body]) => {
     const geometry = new THREE.IcosahedronGeometry(scaler.scaleValue(body.radius) , 16);
     const bodyGroup = new THREE.Group();
@@ -15,7 +15,9 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       bodyGroup.rotation.x = body.axialTilt * Math.PI / 180;
     }
 
-    // scene.add(bodyGroup); 
+    scaler.positionMesh(bodyGroup, body.position);
+
+    scene.add(bodyGroup); 
 
     let material;
 
@@ -49,9 +51,7 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
             }
           }));
 
-          if (celestialBodiesRef.current[key]) {
-            celestialBodiesRef.current[key].material = fallbackMaterial;
-          }
+          material = fallbackMaterial;
         }
       );
 
@@ -63,7 +63,7 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
           map: texture,
           normalMap: normalMap,
           bumpMap: bumpMap,
-          bumpScale: 1,
+          bumpScale: 0.5,
           color: body.color,
           emissive: body.type === 'star' ? body.color : 0x000000,
           emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
@@ -87,15 +87,6 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
     const mesh = new THREE.Mesh(geometry, material);
     scaler.positionMesh(mesh, body.position);
     mesh.userData = { bodyData: body, bodyKey: key };
-    bodyGroup.add(mesh);
-
-    // Create Cannon.js body for celestial body
-    const cannonBody = new CANNON.Body({
-      mass: body.mass || 0, // Set mass to 0 for static bodies like stars and planets
-      shape: new CANNON.Sphere(scaler.scaleValue(body.radius)),
-      position: new CANNON.Vec3(mesh.position.x, mesh.position.y, mesh.position.z)
-    });
-    world.addBody(cannonBody);
 
     // Shadows
     if (NON_SOLID_TYPES.includes(body.type)) {
@@ -104,6 +95,74 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
     }else{
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+    }
+
+    bodyGroup.add(mesh);
+
+    // Glow for stars Add a little pulsating effect
+    if (body.type === "star") {
+      const glowGeometry = new THREE.SphereGeometry(scaler.scaleValue(body.radius * 1.08), 64, 64);
+      const glowMaterial = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(body.color),
+        transparent: true,
+        opacity: 0.15,
+        side: THREE.BackSide,
+        depthWrite: false,
+      });
+
+      const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+      scaler.positionMesh(glowMesh, body.position);
+      bodyGroup.add(glowMesh);
+
+      // Load flare texture (PNG with transparency)
+      const flareTexture = textureLoader.current.load('/textures/lensFlares/sun.png');
+
+      const flareMaterial = new THREE.SpriteMaterial({
+        map: flareTexture,
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+
+      const flareSprite = new THREE.Sprite(flareMaterial);
+      flareSprite.scale.set(
+        scaler.scaleValue(body.radius * 60), 
+        scaler.scaleValue(body.radius * 60), 
+        1
+      );
+
+      // Position at star
+      scaler.positionMesh(flareSprite, body.position);
+      bodyGroup.add(flareSprite);
+
+      // after creating flareSprite
+      function updateFlare() {
+        const d = camera.position.distanceTo(flareSprite.position);
+        const s = 1 / Math.max(0.001, d); // smaller with distance
+        const base = scaler.scaleValue(body.radius * 60);
+        flareSprite.scale.set(base * s * 0.8, base * s * 0.8, 1);
+      }
+
+
+      // Animate flicker
+      function animateFlare() {
+        const time = performance.now() * 0.0002;
+        flareSprite.material.opacity = 1 + Math.sin(time) * 0.01;
+        flareSprite.rotateX(1);
+        requestAnimationFrame(animateFlare);
+      }
+
+      function animateStar() {
+        const time = performance.now() * 0.001;
+        const scale = 1 + Math.sin(time * 2.5) * 0.01;
+        mesh.scale.set(scale, scale, scale);
+        glowMesh.scale.set(scale * 1.08, scale * 1.08, scale * 1.08);
+        requestAnimationFrame(animateStar);
+      }
+
+      animateFlare();
+      // animateStar();
     }
 
     // City lights
@@ -137,60 +196,6 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       const citylightsMesh = new THREE.Mesh(geometry, lightsMat);
       scaler.positionMesh(citylightsMesh, body.position);
       bodyGroup.add(citylightsMesh);
-    }
-
-    
-    
-
-    // Glow for stars Add a little pulsating effect
-    if (body.type === "star") {
-      const glowGeometry = new THREE.SphereGeometry(scaler.scaleValue(body.radius * 1.08), 64, 64);
-      const glowMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(body.color),
-        transparent: true,
-        opacity: 0.15,
-        side: THREE.BackSide,
-        depthWrite: false,
-      });
-
-      const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
-      // glowMesh.position.copy(body.position);
-      scaler.positionMesh(glowMesh, body.position);
-      scene.add(glowMesh);
-
-    
-      function animateStar() {
-        const time = performance.now() * 0.001;
-        const scale = 1 + Math.sin(time * 2.5) * 0.01;
-        mesh.scale.set(scale, scale, scale);
-        glowMesh.scale.set(scale * 1.08, scale * 1.08, scale * 1.08);
-        requestAnimationFrame(animateStar);
-      }
-      animateStar();
-    }
-
-    
-    celestialBodiesRef.current[key] = {
-      mesh: bodyGroup,
-      body: cannonBody
-    };
-
-    // Atmosphere
-    if (body.atmosphere) {
-      const atmosphereGeometry = new THREE.SphereGeometry(
-        scaler.scaleValue(body.radius * 1.05),
-        64,
-        64
-      );
-      const atmosphereMaterial = new THREE.MeshPhongMaterial({
-        color: body.atmosphere.color,
-        transparent: true,
-        opacity: body.atmosphere.opacity,
-        side: THREE.DoubleSide
-      });
-      const atmosphereMesh = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
-      mesh.add(atmosphereMesh);
-      atmosphereRefs.current[key] = atmosphereMesh;
     }
 
     // Clouds
@@ -235,6 +240,44 @@ export function setupCelestialBodies(scene, celestialBodiesRef, orbitRefs, atmos
       cloudsRefs.current[key] = cloudsMesh;
     }
 
+    // Atmosphere
+    if (body.atmosphere) {
+      const atmosphereGeometry = new THREE.SphereGeometry(
+        scaler.scaleValue(body.radius * 1.05),
+        64,
+        64
+      );
+      const atmosphereMaterial = new THREE.MeshPhongMaterial({
+        color: body.atmosphere.color,
+        transparent: true,
+        opacity: body.atmosphere.opacity,
+        side: THREE.DoubleSide
+      });
+      const atmosphereMesh = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+      bodyGroup.add(atmosphereMesh);
+      atmosphereRefs.current[key] = atmosphereMesh;
+    }
+
+    // Create Cannon.js body for celestial body
+    const cannonBody = new CANNON.Body({
+      mass: 0, // Set mass to 0 for static bodies like stars and planets
+      shape: new CANNON.Sphere(scaler.scaleValue(body.radius)),
+      material: celestialBodiesMaterail,
+      position: new CANNON.Vec3(mesh.position.x, mesh.position.y, mesh.position.z)
+    });
+    world.addBody(cannonBody);
+
+    // Add full Map to bodies reference
+    celestialBodiesRef.current[key] = {
+      bodyMesh: bodyGroup,
+      bodyBody: cannonBody,
+      bodyData: body,
+    };
+    // console.log(`Celestial bodies are setted (Mesh Position) : ${celestialBodiesRef.current[key].bodyMesh.position.toArray()}`);
+    // console.log(`Celestial bodies are setted (Body Position) : ${celestialBodiesRef.current[key].bodyBody.position.toArray()}`);
+    // console.log(`Celestial bodies are setted (Body Mass) : ${celestialBodiesRef.current[key].bodyBody.mass}`)
+
+    // Otbit Line
     if (body.orbitalRadius) {
       const segments = 128;
       const xRadius = scaler.scaleValue(body.orbitalRadius);

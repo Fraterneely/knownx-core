@@ -10,10 +10,23 @@ export class SpaceScaler {
     return value * this.SCALE_X;
   }
 
+  // Recale a scalar value to its original value (e.g., radius)
+
+  reScaleValue(value) {
+    return value / this.SCALE_X;
+  }
+
   // Scale a Vector3 position
   scaleVector(v) {
     return new THREE.Vector3(v.x * this.SCALE_X, v.y * this.SCALE_X, v.z * this.SCALE_X);
   }
+
+  // Recale a Vector3 position to its original value
+  reScaleVector(v) {
+    return new THREE.Vector3(v.x / this.SCALE_X, v.y / this.SCALE_X, v.z / this.SCALE_X);
+  }
+
+
 
   // Apply scale to a mesh's size (e.g., radius of planet)
   scaleMesh(mesh, value) {

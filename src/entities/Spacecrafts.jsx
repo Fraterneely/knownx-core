@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Spacecraft } from '../entities/SpaceCraft.js';
 import { SpaceScaler } from '../utils/scaler.js';
 import { ThirdPersonCamera } from '../components/game/cameraSetup.js';
-import { space } from 'postcss/lib/list';
+import * as CANNON from 'cannon-es';
 
 const spacecraftObjects = new Map(); // Map: name -> 3D Object
 const loader = new GLTFLoader();
@@ -14,14 +14,31 @@ const scaler = new SpaceScaler();
  * @param {THREE.Scene} scene - Three.js scene to attach models to.
  * @returns {Promise} - Resolves when all models are loaded.
  */
-export async function loadAllSpacecraftModels(scene, camera, spacecraftLists, spacecraftRef, selectedSpacecraftRef, thirdPersonRef, setLoadingProgress) {
+export async function loadAllSpacecraftModels(world, scene, spacecraftsMaterial, spacecraftLists, spacecraftRef, selectedSpacecraftRef, setLoadingProgress) {
   const spacecraftList = spacecraftLists; 
   console.log('Starting spacecrafts loading ...');
-
   const loadPromises = spacecraftList.map((sc, index) => {
     return new Promise((resolve, reject) => {
+
       console.log("Found craft named " + sc.name)
       console.log(`Loading a ${sc.name}'s 3D Model...`);
+
+      // Spacecraft body for physics engine
+      const shipSize = scaler.scaleValue(sc.size.x, sc.size.y, sc.size.z) || 1;
+      console.log(`Scaled Ship size is ${shipSize}`);
+      const body = new CANNON.Body({
+        mass: 1,
+        position: new CANNON.Vec3(scaler.scaleValue(sc.position.x), scaler.scaleValue(sc.position.y), scaler.scaleValue(sc.position.z)),
+        shape: new CANNON.Box(new CANNON.Vec3(0.000002, 0.00000067, 0.00000267)),
+        material: spacecraftsMaterial,
+        velocity: new CANNON.Vec3(0, 0, 0),
+        angularVelocity: new CANNON.Vec3(0, 0, 0),
+        quaternion: new CANNON.Quaternion(sc.orientation.x, sc.orientation.y, sc.orientation.z, sc.orientation.w),
+      });
+      world.addBody(body);
+
+
+      // Spacecraft model for rendering
       loader.load(
         '/models/spacecrafts/spaceship_low_poly.glb',
         (gltf) => {
@@ -32,30 +49,25 @@ export async function loadAllSpacecraftModels(scene, camera, spacecraftLists, sp
           const spacecraft = new THREE.Object3D();
           spacecraft.add(model);
           scaler.positionMesh(spacecraft, sc.position);
-
-          console.log(`Spacecraft ${sc.name} is placed at ${spacecraft.position.toArray()}`);
+          // spacecraft.rotation.z =  Math.PI / 2
 
           scene.add(spacecraft);
-          spacecraftObjects.set(sc.name, spacecraft);
-          spacecraftRef.current = spacecraftObjects;
-
 
           const spacecraftWrapper = {
+            body: body, // The CANNON.Body
             model: spacecraft, // The THREE.Object3D model
             data: sc // The full Spacecraft object
           };
-          console.log(`Spacecraft Wrapper is setted, ${spacecraftWrapper}`);
+          spacecraftRef.current.set(sc.name, spacecraftWrapper);
+          // console.log(`Spacecraft Wrapper is setted (Body Pos), ${spacecraftWrapper.body.position.toArray()}`);
+          // console.log(`Spacecraft Wrapper is setted (Model Pos), ${spacecraftWrapper.model.position.toArray()}`);
+          // console.log(`Spacecraft Wrapper is setted (Data Pos), ${spacecraftWrapper.data.position.toArray()}`);
 
-          // position camera for the FIRST craft
+
+
+          //the FIRST craft
           if (index === 0) {
             selectedSpacecraftRef.current = spacecraftWrapper;
-
-            thirdPersonRef.current = new ThirdPersonCamera({ 
-              camera: camera,
-              target: selectedSpacecraftRef.current.model,
-            });
-            console.log(`Third Person Camera is setted`);
-
           }
           setLoadingProgress(prev => ({
             ...prev,

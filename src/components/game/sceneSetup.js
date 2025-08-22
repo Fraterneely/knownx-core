@@ -1,15 +1,16 @@
 import * as THREE from 'three';
 import { CameraSetup } from './cameraSetup';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 export function setupScene(mountRef) {
   // Scene setup
   const scene = new THREE.Scene();
   
-  // Debug logging for background texture loading
+  // Background texture (your skybox)
   const textureLoader = new THREE.CubeTextureLoader();
   textureLoader.setPath('/unibox/blue/');
-
-  
   const texturePaths = [
     'bkg1_right.png',
     'bkg1_left.png', 
@@ -18,10 +19,6 @@ export function setupScene(mountRef) {
     'bkg1_front.png',
     'bkg1_back.png'
   ];
-
-  console.log('Loading background textures from:', '/Unibox/blue/');
-  console.log('Texture paths:', texturePaths);
-
   textureLoader.load(
     texturePaths,
     (texture) => {
@@ -40,11 +37,10 @@ export function setupScene(mountRef) {
   const cameraSetup = new CameraSetup();
   const camera = cameraSetup.getCamera();
 
-  // Create a listener
+  // Audio setup (optional)
   const listener = new THREE.AudioListener();
   // camera.add(listener);
 
-  // Positional audio
   const sound = new THREE.PositionalAudio(listener);
   const audioLoader = new THREE.AudioLoader();
 
@@ -57,12 +53,22 @@ export function setupScene(mountRef) {
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
 
-  // Clear any existing canvas elements before adding a new one
   while (mountRef.current.firstChild) {
     mountRef.current.removeChild(mountRef.current.firstChild);
   }
-
   mountRef.current.appendChild(renderer.domElement);
 
-  return { scene, camera, renderer, audioLoader, sound };
+  // 🎇 Bloom + Postprocessing setup
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    1.5,  // strength
+    0.000000004,  // radius
+    0.85  // threshold
+  );
+  composer.addPass(bloomPass);
+
+  return { scene, camera, renderer, composer, audioLoader, sound };
 }
