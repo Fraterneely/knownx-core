@@ -8,7 +8,8 @@ import { setupCelestialBodies } from './celestialBodySetup';
 import { TextureLoader, Vector3, Euler } from 'three';
 import { loadAllSpacecraftModels, updatePosition, 
         applyThrust, updateOrientation,
-        updateShipControl, updateSpacecraftModels } from '../../entities/Spacecrafts';
+        updateShipControl, updateSpacecraftModels, 
+        updateVelocity, updateSystems} from '../../entities/Spacecrafts';
 import { SpaceScaler } from '../../utils/scaler';
 import { setupStarfield } from './starfieldSetup';
 import { handleKeyDown, handleKeyUp, keysPressed, 
@@ -176,7 +177,7 @@ export default function SpaceRenderer({
       if (!isPaused) {
         // Update game time
         const currentTime = Date.now();
-        const deltaTime = (currentTime - time) * timeScale;
+        const deltaTime = ((currentTime - time) / 1000) * timeScale;
         setGameTime(prev => prev + deltaTime);
         time = currentTime;
 
@@ -207,26 +208,30 @@ export default function SpaceRenderer({
 
           // Thrust and orientation application
           if (!ship || !shipData || !shipBody) return;
-          const thrustPower = 0.00001;
-          const { deltaPitch, deltaYaw, deltaRoll } = getRotationDeltaFromKeys(1);
-          const rotated = updateOrientation(shipData, deltaPitch, deltaYaw, deltaRoll);
 
           // Apply orientation
-          const torque = new CANNON.Vec3(deltaPitch, deltaYaw, deltaRoll);
-          shipBody.applyTorque(torque);
-          // shipBody.rotation = torque;
-          console.log(` ShipBody's quaternion: ${shipBody.quaternion.toArray()}`);
-          
+          const rotationSpeed = 0.09;
+          const { deltaPitch, deltaYaw, deltaRoll } = getRotationDeltaFromKeys(rotationSpeed);
+          const qDelta = new CANNON.Quaternion();
+          qDelta.setFromEuler(deltaPitch * rotationSpeed, deltaYaw * rotationSpeed, deltaRoll * rotationSpeed, "XYZ");
+
+          // Apply to shipBody quaternion
+          shipBody.quaternion = shipBody.quaternion.mult(qDelta);
+          // console.log(` ShipBody's quaternion: ${shipBody.quaternion.toArray()}`);
 
           // Apply thrust to Cannon.js body
-          const thrustVector = getThrustVectorFromKeys(rotated.orientation);
-          const cannonThrustVector = new CANNON.Vec3(thrustVector.x, thrustVector.y, thrustVector.z);
-          shipBody.applyForce(cannonThrustVector.scale(thrustPower));
+          const thrustPower = 0.001;
+          const thrustDir = getThrustVectorFromKeys(shipBody.quaternion);
+          if (thrustDir.lengthSquared() > 0) {
+            const thrustVector = thrustDir.scale(thrustPower);
+            shipBody.applyForce(thrustVector);
+          }
+
 
           // Apply gravitational forces from celestial bodies to Cannon.js body
           for (const bodyName in celestialBodiesRef.current) {
             const body = celestialBodiesRef.current[bodyName];
-            if (shipBody && shipData && ship && body.bodyBody && body.bodyMesh && body.bodyData) { // Ensure body has mass and a mesh for position
+            if (shipBody && shipData && ship && body.bodyBody && body.bodyMesh && body.bodyData) {
               // console.log(`Applying gravity pull to ${shipData.name} from ${bodyName}`);
               const force = gravitationalForce(
                 shipData.position, // Spacecraft position
@@ -239,15 +244,19 @@ export default function SpaceRenderer({
             }
           }
 
-          // Update spacecraft data with Cannon.js position and orientation
+          // Sync Three.js model to Cannon body
+          ship.position.copy(shipBody.position);
+          ship.quaternion.copy(shipBody.quaternion);
+
+          // Sync data to body
           shipData.position.copy(scaler.reScaleVector(shipBody.position));
-          shipData.orientation.copy(scaler.reScaleVector(shipBody.quaternion));
+          shipData.orientation.copy(shipBody.quaternion);
+          shipData.velocity.copy(scaler.reScaleVector(shipBody.velocity));
 
-          const updatedShipData = updatePosition(shipData, deltaTime);
-
-          // Update Three.js mesh position and rotation from Cannon.js body
-          scaler.positionMesh(ship, updatedShipData.position)
-          ship.rotation.copy(new Euler(updatedShipData.orientation.x, updatedShipData.orientation.y, updatedShipData.orientation.z,));
+          let updatedShipData = updatePosition(shipData);
+          updatedShipData = updateOrientation(updatedShipData);
+          updatedShipData = updateVelocity(updatedShipData);
+          updatedShipData = updateSystems(updatedShipData, deltaTime);
 
           // console.debug(`Update Ship data:(
           //   Position: (${updatedShipData.position.toArray()});
@@ -303,7 +312,7 @@ export default function SpaceRenderer({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [sceneReady]);
+  }, [sceneReady, timeScale]);
 
   return (
     <div>

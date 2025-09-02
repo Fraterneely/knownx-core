@@ -64,7 +64,7 @@ export function setupScene(mountRef) {
 
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    1.5,  // strength
+    0.1,  // strength
     0.000000004,  // radius
     0.85  // threshold
   );

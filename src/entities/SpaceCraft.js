@@ -19,7 +19,7 @@ export const Spacecraft = {
         power: 100,
         thrust: 1,
         mass: 1,
-        target_body: "Venus",
+        target_body: "Mars",
         mission_status: "active",
         orientation: new Quaternion().setFromEuler(new Euler(0, 0, 0)), 
         thrust_vector: new Vector3(0, 0, 0),
@@ -30,6 +30,7 @@ export const Spacecraft = {
   },
   
   // Apply thrust in a specific direction
+  // Depriciated for real physics in physics utilty
   applyThrust: (spacecraft, thrustVector, thrustLevel, deltaTime) => {
     // console.log('applyThrust - Input:', { spacecraft, thrustVector, thrustLevel, deltaTime });
     
@@ -71,7 +72,7 @@ export const Spacecraft = {
     };
     // console.log('Calculated acceleration:', acceleration);
     // Update velocity (km/s)
-    const newVelocity = {
+    let newVelocity = {
         x: spacecraft.velocity.x + acceleration.x * deltaTime,
         y: spacecraft.velocity.y + acceleration.y * deltaTime,
         z: spacecraft.velocity.z + acceleration.z * deltaTime
@@ -102,6 +103,7 @@ export const Spacecraft = {
   },
   
   // Calculate gravitational forces from celestial bodies
+  // Depriciated for real physics in physics
   calculateGravity: (spacecraft, celestialBodies) => {
     let totalForce = { x: 0, y: 0, z: 0 };
     
@@ -131,7 +133,7 @@ export const Spacecraft = {
   },
   
   // Update spacecraft position based on velocity
-  updatePosition: (spacecraft, deltaTime) => {
+  updatePosition: (spacecraft) => {
     // console.log('Updating position for spacecraft:', spacecraft);
     if (!spacecraft || !spacecraft.position || !spacecraft.velocity){
       console.error('Invalid spacecraft data for position update');
@@ -149,29 +151,10 @@ export const Spacecraft = {
     // console.log('updatePosition - Output (position):', result.position);
     return result;
   },
-  
-  // Update spacecraft systems (oxygen, power, etc.)
-  updateSystems: (spacecraft, deltaTime) => {
-    // Basic consumption rates
-    const oxygenConsumption = 0.05 * deltaTime; // hours
-    const powerConsumption = 0.2 * deltaTime; // kWh
-    
-    // Additional consumption based on thrust level
-    const thrustOxygenFactor = spacecraft.thrust_level * 0.1;
-    const thrustPowerFactor = spacecraft.thrust_level * 0.3;
-    
-    return {
-      ...spacecraft,
-      oxygen: Math.max(0, spacecraft.oxygen - oxygenConsumption - (thrustOxygenFactor * deltaTime)),
-      power: Math.max(0, spacecraft.power - powerConsumption - (thrustPowerFactor * deltaTime))
-    };
-  },
 
-  updateOrientation: (spacecraft, deltaPitch, deltaYaw, deltaRoll) => {
-    // console.log('updateOrientation - Input:', { spacecraft, deltaPitch, deltaYaw, deltaRoll });
-    const deltaQuat = new Quaternion().setFromEuler(new Euler(deltaPitch, deltaYaw, deltaRoll, 'XYZ'));
-  
-    const newOrientation = spacecraft.orientation.clone().multiply(deltaQuat).normalize();
+  updateOrientation: (spacecraft) => {
+    // console.log('updateOrientation - Input:', { spacecraft.orientation });
+    const newOrientation = spacecraft.orientation;
   
     const result = {
       ...spacecraft,
@@ -180,6 +163,41 @@ export const Spacecraft = {
     // console.log('updateOrientation - Output (orientation):', result.orientation);
     return result;
   },
+
+  updateVelocity: (spacecraft) => {
+    const newVelocity = spacecraft.velocity;
+
+    const result = {
+      ...spacecraft,
+      velocity: newVelocity
+    };
+    return result;
+  },
+
+  // Update spacecraft systems (oxygen, power, etc.)
+  updateSystems: (spacecraft, deltaTimeSec = 1) => {
+    // Base consumption rates per second
+    const BASE_OXYGEN_CONSUMPTION = 0.0005; // oxygen units/sec
+    const BASE_POWER_CONSUMPTION  = 0.002;  // kWh/sec
+    
+    const crewCount = spacecraft.crew || 1;
+    
+    // Calculate usage
+    const oxygenConsumption = BASE_OXYGEN_CONSUMPTION * crewCount * deltaTimeSec;
+    const powerConsumption  = BASE_POWER_CONSUMPTION * deltaTimeSec;
+    
+    // Thrust multipliers
+    const thrustOxygenFactor = spacecraft.thrust_level * 0.001 * deltaTimeSec;
+    const thrustPowerFactor  = spacecraft.thrust_level * 0.01  * deltaTimeSec;
+    
+    return {
+      ...spacecraft,
+      oxygen: Math.max(0, spacecraft.oxygen - oxygenConsumption - thrustOxygenFactor),
+      power:  Math.max(0, spacecraft.power  - powerConsumption  - thrustPowerFactor)
+    };
+  },
+
+
   
   // Autopilot function to navigate to a target body
   navigateToTarget: (spacecraft, targetBody, celestialBodies, deltaTime) => {

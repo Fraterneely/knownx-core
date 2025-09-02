@@ -87,6 +87,7 @@ export function setupCelestialBodies(world, scene, camera, celestialBodiesMatera
     const mesh = new THREE.Mesh(geometry, material);
     scaler.positionMesh(mesh, body.position);
     mesh.userData = { bodyData: body, bodyKey: key };
+    bodyGroup.add(mesh);
 
     // Shadows
     if (NON_SOLID_TYPES.includes(body.type)) {
@@ -96,8 +97,6 @@ export function setupCelestialBodies(world, scene, camera, celestialBodiesMatera
       mesh.castShadow = true;
       mesh.receiveShadow = true;
     }
-
-    bodyGroup.add(mesh);
 
     // Glow for stars Add a little pulsating effect
     if (body.type === "star") {

@@ -11,6 +11,7 @@ import {
   Settings, Navigation, Zap, Play, Pause, FastForward, 
   RotateCcw, PanelRightClose, Target, Compass, Gauge
 } from 'lucide-react';
+import VelocityDisplay from '../../utils/utils';
 
 // List of celestial bodies for targeting
 const CELESTIAL_BODIES = [
@@ -30,7 +31,7 @@ export default function ControlPanel({
   timeScale,
   setTimeScale,
   onTargetChange,
-  onThrustApply,
+
   setShowControls
 }) {
   const [thrustDirection, setThrustDirection] = useState({ x: 0, y: 0, z: 0 });
@@ -80,31 +81,7 @@ export default function ControlPanel({
     setFlightLog(prev => [newEntry, ...prev].slice(0, 50)); // Keep last 50 entries
   };
 
-  const handleThrustApply = () => {
-    if (spacecraft.fuel > 0) {
-      const thrustLevel = thrustPower / 100;
-      
-      // Apply thrust using our enhanced physics model
-      const deltaTime = 0.1; // Small time step for immediate feedback
-      const updatedSpacecraft = Spacecraft.applyThrust(
-        spacecraft,
-        thrustDirection,
-        thrustLevel,
-        deltaTime
-      );
-      
-      // Log the action
-      addLogEntry('Thrust Applied', {
-        direction: `X:${thrustDirection.x.toFixed(2)}, Y:${thrustDirection.y.toFixed(2)}, Z:${thrustDirection.z.toFixed(2)}`,
-        power: `${thrustPower}%`,
-        fuelUsed: (spacecraft.fuel - updatedSpacecraft.fuel).toFixed(2)
-      });
-      
-      // Update spacecraft state
-      onSpacecraftUpdate(updatedSpacecraft);
-      onThrustApply(thrustDirection);
-    }
-  };
+
 
   const handleEmergencyStop = () => {
     const updatedSpacecraft = {
@@ -283,24 +260,17 @@ export default function ControlPanel({
                 <span>Heading:</span>
               </div>
               <div className="ml-4">
-                Pitch: {(spacecraft.orientation?.pitch * (180/Math.PI)).toFixed(1)}°
+                Pitch: {(spacecraft.orientation?.x * (180/Math.PI)).toFixed(1)}°
               </div>
               <div className="ml-4">
-                Yaw: {(spacecraft.orientation?.yaw * (180/Math.PI)).toFixed(1)}°
+                Yaw: {(spacecraft.orientation?.y * (180/Math.PI)).toFixed(1)}°
+              </div>
+              <div className="ml-4">
+                Roll: {(spacecraft.orientation?.z * (180/Math.PI)).toFixed(1)}°
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-1">
-                <Gauge className="w-3 h-3" />
-                <span>Velocity:</span>
-              </div>
-              <div className="ml-4">
-                {Math.sqrt(
-                  spacecraft.velocity.x ** 2 + 
-                  spacecraft.velocity.y ** 2 + 
-                  spacecraft.velocity.z ** 2
-                ).toFixed(4)} AU/h
-              </div>
+              <VelocityDisplay velocity={spacecraft.velocity} />
             </div>
           </div>
           
@@ -385,11 +355,10 @@ export default function ControlPanel({
           </div>
           
           <Button
-            onClick={handleThrustApply}
-            disabled={spacecraft.fuel <= 0}
+            disabled={true}
             className="w-full bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white font-medium"
           >
-            Apply Thrust
+            Thrust Applied by Keyboard
           </Button>
         </CardContent>
       </Card>

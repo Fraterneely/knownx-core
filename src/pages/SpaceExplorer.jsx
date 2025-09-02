@@ -21,7 +21,21 @@ export default function SpaceExplorer() {
   const [isLoading, setIsLoading] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [showHUD, setShowHUD] = useState(false);
-  const [showNavigationMap, setShowNavigationMap] = useState(true);
+  const [showNavigationMap, setShowNavigationMap] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'm' || event.key === 'M') {
+        setShowNavigationMap((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
   const [gameOverReason, setGameOverReason] = useState(null); // New state
   const spacecraftDataRef = useRef(spacecraft); // Updated initialization as per outline
 
@@ -195,7 +209,7 @@ export default function SpaceExplorer() {
         spacecraftList={spacecraftList}
         onSpacecraftUpdate={handleSpacecraftUpdate}
         targetBody={spacecraft.target_body}
-        isPaused={isPaused || !!gameOverReason} // Pause game if game over
+        isPaused={isPaused || gameOverReason}
         timeScale={timeScale}
         className="absolute inset-0 z-0"
       />
@@ -252,7 +266,14 @@ export default function SpaceExplorer() {
         </div>
 
         {/* Navigation Map */}
-        {/* {showHUD && showNavigationMap && <NavigationMap spacecraft={spacecraft} />} */}
+        {showHUD && showNavigationMap && (
+          <div className={`fixed inset-0 z-40 flex items-center justify-center transition-opacity duration-300 ${showNavigationMap ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className="absolute inset-0 bg-black bg-opacity-50 backdrop-filter backdrop-blur-md"></div>
+            <div className="relative z-50 w-full h-full p-4">
+              <NavigationMap spacecraft={spacecraft} gameTime={gameTime} />
+            </div>
+          </div>
+        )}
 
         {/* Toggle Navigation Map Button */}
         {showHUD && <div className="absolute bottom-4 right-4 z-10 pointer-events-auto">

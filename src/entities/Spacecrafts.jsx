@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Spacecraft } from '../entities/SpaceCraft.js';
 import { SpaceScaler } from '../utils/scaler.js';
-import { ThirdPersonCamera } from '../components/game/cameraSetup.js';
 import * as CANNON from 'cannon-es';
 
 const spacecraftObjects = new Map(); // Map: name -> 3D Object
@@ -144,12 +143,22 @@ export function applyThrust(sc, thrustVector, thrustLevel, deltaTime){
   return updated;
 }
 
-export function updatePosition(updated, deltaTime){
-  const moved = Spacecraft.updatePosition(updated, deltaTime);
-  return moved;
+export function updatePosition(updated){
+  const update = Spacecraft.updatePosition(updated);
+  return update;
 }
 
-export function updateOrientation(updated, deltaPitch, deltaYaw, deltaRoll){
-  const rotated = Spacecraft.updateOrientation(updated, deltaPitch, deltaYaw, deltaRoll);
-  return rotated;
+export function updateOrientation(updated){
+  const update = Spacecraft.updateOrientation(updated);
+  return update;
+}
+
+export function updateVelocity(updated){
+  const update = Spacecraft.updateVelocity(updated);
+  return update;
+}
+
+export function updateSystems(updated, deltaTime){
+  const update = Spacecraft.updateSystems(updated, deltaTime);
+  return update;
 }
