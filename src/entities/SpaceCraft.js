@@ -9,7 +9,7 @@ export const Spacecraft = {
     return [
       {
         name: "Imboni-1",
-        position: new Vector3(0.99991, 0, 0),
+        position: new Vector3(1 + 4.530e-5, 0, 0), 
         size: new Vector3(0.00000000267, 0.00000000267, 0.00000000267),
         velocity: new Vector3(0, 0, 0),
         max_speed: 0.00041666,
@@ -18,7 +18,7 @@ export const Spacecraft = {
         oxygen: 500,
         power: 100,
         thrust: 1,
-        mass: 1,
+        mass: 10000,
         target_body: "Mars",
         mission_status: "active",
         orientation: new Quaternion().setFromEuler(new Euler(0, 0, 0)), 

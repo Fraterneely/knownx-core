@@ -26,13 +26,15 @@ export async function loadAllSpacecraftModels(world, scene, spacecraftsMaterial,
       const shipSize = scaler.scaleValue(sc.size.x, sc.size.y, sc.size.z) || 1;
       console.log(`Scaled Ship size is ${shipSize}`);
       const body = new CANNON.Body({
-        mass: 1,
+        mass: sc.mass,
         position: new CANNON.Vec3(scaler.scaleValue(sc.position.x), scaler.scaleValue(sc.position.y), scaler.scaleValue(sc.position.z)),
-        shape: new CANNON.Box(new CANNON.Vec3(0.000002, 0.00000067, 0.00000267)),
+        shape: new CANNON.Box(new CANNON.Vec3(shipSize.x, shipSize.y, shipSize.z)),
         material: spacecraftsMaterial,
         velocity: new CANNON.Vec3(0, 0, 0),
         angularVelocity: new CANNON.Vec3(0, 0, 0),
         quaternion: new CANNON.Quaternion(sc.orientation.x, sc.orientation.y, sc.orientation.z, sc.orientation.w),
+        linearDamping: 0,   // no slowdown in space
+        angularDamping: 0,  // optional, stops rotational slowdown
       });
       world.addBody(body);
 

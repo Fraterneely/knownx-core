@@ -56,7 +56,7 @@ const NavigationMap = ({ spacecraft, gameTime }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [lastMouseX, setLastMouseX] = useState(0);
   const [lastMouseY, setLastMouseY] = useState(0);
-  const [zoom, setZoom] = useState(142.0);
+  const [zoom, setZoom] = useState(100.0);
   const [rotation, setRotation] = useState(0);
   const [selectedBody, setSelectedBody] = useState(null);
   const [bodyPositions, setBodyPositions] = useState([]);
@@ -290,7 +290,7 @@ const NavigationMap = ({ spacecraft, gameTime }) => {
               setOffsetY((p) => p + dy);
             }
             setLastMouseX(e.clientX);
-            setLastMouseY(e.clientY);
+            setLastMouseY(e.clientY); 
           }}
           onMouseUp={() => setIsDragging(false)}
           onMouseLeave={() => setIsDragging(false)}

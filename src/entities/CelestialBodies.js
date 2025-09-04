@@ -8,7 +8,8 @@ export const CELESTIAL_BODIES = {
     position: new THREE.Vector3(0, 0, 0),
     radius: 465.47454e-5, // AU
     color: '#FDB813',
-    mass: 0,
+    mass: 1.989e30,
+    // mass: 0,
     type: 'star',
     texture: '/textures/sun.jpg',
     emissive: true,
@@ -29,6 +30,7 @@ export const CELESTIAL_BODIES = {
     orbitalEccentricity: 0.205,
     rotationPeriod: 58.6, // days
     axialTilt: 0.034, // degrees
+    parent: 'sun',
     texture: '/textures/mercury.jpg'
   },
   venus: {
@@ -44,6 +46,7 @@ export const CELESTIAL_BODIES = {
     orbitalEccentricity: 0.007,
     rotationPeriod: -243, // days (negative for retrograde)
     axialTilt: 177.4, // degrees
+    parent: 'sun',
     texture: '/textures/venus.jpg',
     atmosphere: {
       color: '#FFFACD',
@@ -55,7 +58,7 @@ export const CELESTIAL_BODIES = {
     position: new Vector3(1, 0, 0),
     radius: 4.26343e-5, // AU
     color: '#6B93D6',
-    mass: 590000000000,
+    mass: 5.972e24,
     type: 'planet',
     orbitalRadius: 1,
     orbitalPeriod: 365.25,
@@ -63,6 +66,7 @@ export const CELESTIAL_BODIES = {
     orbitalEccentricity: 0.017,
     rotationPeriod: 1, // days
     axialTilt: 23.44, // degrees
+    parent: 'sun',
     texture: '/textures/earth/earthmap1k.jpg',
     // normalMap: '/textures/earth/earth-normal-8k.png',
     // bumpMap: '/textures/earth/earthbump1k.jpg',
@@ -105,6 +109,7 @@ export const CELESTIAL_BODIES = {
     orbitalEccentricity: 0.094,
     rotationPeriod: 1.03, // days
     axialTilt: 25.19, // degrees
+    parent: 'sun',
     texture: '/textures/mars.jpg',
     atmosphere: {
       color: '#FFE4B5',
@@ -124,6 +129,7 @@ export const CELESTIAL_BODIES = {
     orbitalEccentricity: 0.049,
     rotationPeriod: 0.41, // days
     axialTilt: 3.13, // degrees
+    parent: 'sun',
     texture: '/textures/jupiter.jpg'
   },
   neptune: {
@@ -139,6 +145,7 @@ export const CELESTIAL_BODIES = {
     orbitalEccentricity: 0.0086,
     rotationPeriod: 0.67, // days
     axialTilt: 28.32, // degrees
+    parent: 'sun',
     texture: '/textures/neptune.jpg'
   },
   uranus: {
@@ -154,6 +161,7 @@ export const CELESTIAL_BODIES = {
     orbitalEccentricity: 0.047,
     rotationPeriod: 0.72, // days
     axialTilt: 97.77, // degrees
+    parent: 'sun',
     texture: '/textures/uranus.jpg'
   },
 };

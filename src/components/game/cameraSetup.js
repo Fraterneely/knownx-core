@@ -20,7 +20,7 @@ export class CameraSetup {
 }
 export class ThirdPersonCamera {
     constructor(params) {
-        console.log("Initializing ThirdPersonCamera...");
+        console.log("Initializing FristPersonCamera...");
         this.params = params;
         this.camera = params.camera;
         this.currentPosition = new THREE.Vector3();
@@ -30,37 +30,66 @@ export class ThirdPersonCamera {
         console.log(`Target rotation: ${this.params.target.quaternion.toArray()}`);
     }
     _CalculateIdealOffset() {
-        const offset = new THREE.Vector3(0, 0.000002, 0.000005);
-        // console.log(`Target Rotaion: ${this.params.target.rotation.toArray()}`);
+        const offset = new THREE.Vector3(0, 2, 5); 
         const q = new THREE.Quaternion().setFromEuler(this.params.target.rotation);
-        // console.log(`Target Quaternion: ${q.toArray()}`);
         offset.applyQuaternion(q);
         return this.params.target.position.clone().add(offset);
     }
         
     _CalculateIdealLookat() {
-        const look = new THREE.Vector3(0, 0, 0.000006);
+        const look = new THREE.Vector3(0, 0, 2);
         const q = new THREE.Quaternion().setFromEuler(this.params.target.rotation);
         look.applyQuaternion(q);
         return this.params.target.position.clone().add(look);
     }
       
     Update(timeElapsed) {
-        // console.log(`Updating camera position and orientation from: ${this.camera.position.toArray()}, for taget (POS): ${this.params.target.position.toArray()}`);
-        // console.log(`Updating camera position and orientation from: ${this.camera.rotation.toArray()}, for taget (ROTATION): ${this.params.target.rotation.toArray()}`);
         const idealOffset = this._CalculateIdealOffset();
         const idealLookat = this._CalculateIdealLookat();
         
-        const t = 1.0 * timeElapsed;
+        const t = 0.1 * timeElapsed;
         this.currentPosition.lerp(idealOffset, t);
         this.currentLookat.lerp(idealLookat, t);
-        
-        // console.log(`Current Position after lerp: ${this.currentPosition.toArray()}`);
-        // console.log(`Current Lookat after lerp: ${this.currentLookat.toArray()}`);
 
         this.camera.position.copy(this.currentPosition);
         this.camera.lookAt(this.currentLookat);
-        // console.log(`Camera position set to: ${this.camera.position.toArray()}`);
-        // console.log(`Camera looking at: ${this.currentLookat.toArray()}`);
+    }
+}
+
+export class FirstPersonCamera {
+    constructor(params) {
+        console.log("Initializing FristPersonCamera...");
+        this.params = params;
+        this.camera = params.camera;
+        this.currentPosition = new THREE.Vector3();
+        this.currentLookat = new THREE.Vector3();
+        
+        console.log(`Target position: ${this.params.target.position.toArray()}`);
+        console.log(`Target rotation: ${this.params.target.quaternion.toArray()}`);
+    }
+    _CalculateIdealOffset() {
+        const offset = new THREE.Vector3(0, 2, 5); 
+        const q = new THREE.Quaternion().setFromEuler(this.params.target.rotation);
+        offset.applyQuaternion(q);
+        return this.params.target.position.clone().add(offset);
+    }
+        
+    _CalculateIdealLookat() {
+        const look = new THREE.Vector3(0, 2, -2);
+        const q = new THREE.Quaternion().setFromEuler(this.params.target.rotation);
+        look.applyQuaternion(q);
+        return this.params.target.position.clone().add(look);
+    }
+      
+    Update(timeElapsed) {
+        const idealOffset = this._CalculateIdealOffset();
+        const idealLookat = this._CalculateIdealLookat();
+        
+        const t = 0.1 * timeElapsed;
+        this.currentPosition.lerp(idealOffset, t);
+        this.currentLookat.lerp(idealLookat, t);
+
+        this.camera.position.copy(this.currentPosition);
+        this.camera.lookAt(this.currentLookat);
     }
 }

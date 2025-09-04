@@ -1,9 +1,11 @@
 import * as CANNON from 'cannon-es';
+import * as THREE from 'three';
 import CannonDebugger from 'cannon-es-debugger';
 
 // Gravitational Constant (real value, for accurate physics simulation)
 export const G = 6.67408e-11; // m^3 kg^-1 s^-2
 export const AU_TO_METERS = 1.49598e11; // 1 AU in meters
+export const FORCE_SCALE = 1 / AU_TO_METERS; // scale N·m → AU·kg/s²
 
 export function toMeters(vAU) {
   return vAU.clone().multiplyScalar(AU_TO_METERS);
@@ -47,15 +49,13 @@ export function gravitationalForce(body1PosAU, m1, body2PosAU, m2) {
   const p2 = toMeters(body2PosAU);
 
   const rVec = p2.clone().sub(p1);          // meters
-//   console.log(`rVec: (${rVec.toArray()})`);
+  // console.log(`rVec: (${rVec.toArray()})`);
   const r = rVec.length();
-//   console.log(`r: ${r}`);
-  if (r === 0) return rVec.set(0,0,0);
-
+  // console.log(`r: ${r} m`);
   const dir = rVec.clone().divideScalar(r); // unitless
-//   console.log(`direction: ${dir.toArray()}`);
+  // console.log(`direction: ${dir.toArray()}`);
   const mag = G * m1 * m2 / (r*r);          // newtons
-//   console.log(`Force Mag: ${mag}`);
+  // console.log(`Force Mag: ${mag} N`);
   return dir.multiplyScalar(mag);           // N vector on body1
 }
 
@@ -106,5 +106,6 @@ export function calculateThrustForce(direction, magnitude) {
  * @param {THREE.Vector3} force - The force vector to apply.
  */
 export function applyForceToBody(body, force) {
-    body.applyForce(new CANNON.Vec3(force.x, force.y, force.z));
+  const scaledForce = new CANNON.Vec3(force.x, force.y, force.z).scale(FORCE_SCALE);
+  body.applyForce(scaledForce);
 }
