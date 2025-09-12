@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import NavigationInfo from './NavigationInfo';
 import { CELESTIAL_BODIES } from '../../entities/CelestialBodies';
+import { computeTrajectoryAU } from '../../utils/trajectory';
 
 // Visual tuning knobs
 const RENDER_MIN_PX = 0.5;
@@ -142,6 +143,7 @@ const NavigationMap = ({ spacecraft, gameTime }) => {
 
       // Apply transforms (note: user-space is CSS px)
       ctx.translate(centerX + offsetX - spacecraftPixelX * zoom, centerY + offsetY - spacecraftPixelY * zoom);
+      // ctx.translate(centerX + offsetX, centerY + offsetY);
       ctx.rotate(rotation);
       ctx.scale(zoom, zoom);
 
@@ -249,14 +251,65 @@ const NavigationMap = ({ spacecraft, gameTime }) => {
       setBodyPositions(positions);
       bodyPositionsRef.current = positions;
 
+      // prepare bodies array for the predictor (AU)
+      const bodiesForTraj = Object.values(CELESTIAL_BODIES).map(b => ({
+        name: b.name,
+        position: { x: b.position.x, y: b.position.y, z: b.position.z },
+        mass: b.mass,
+        radius: b.radius || 0
+      }));
+      bodiesForTraj.forEach( body => {
+        console.log(`${body.name}'s data for trajectory\nPos: (${body.position.x}, ${body.position.y}, ${body.position.z}) \nMass: ${body.mass} \nRadius: ${body.radius}`);
+      })
+
+      // ship pos & vel in AU
+      // IMPORTANT: ensure spacecraft.velocity is in AU/s. If it is in m/s convert: v_AU_s = v_m_s / AU_IN_METERS
+      const shipPosAU = { x: spacecraft.position.x, y: spacecraft.position.y, z: spacecraft.position.z };
+      console.log(`Current ship position: ${shipPosAU.x}, ${shipPosAU.y}, ${shipPosAU.z}`);
+      const shipVelAU = spacecraft.velocity 
+        ? { x: spacecraft.velocity.x, y: spacecraft.velocity.y, z: spacecraft.velocity.z } 
+        : { x: 0, y: 0, z: 0 };
+      console.log(`Current ship velocity: ${shipVelAU.x}, ${shipVelAU.y}, ${shipVelAU.z}`);
+
+      // compute trajectory (tune steps & dt)
+      const trajPtsAU = computeTrajectoryAU(shipPosAU, shipVelAU, bodiesForTraj);
+      console.log("Trajectory's first point:", trajPtsAU[0]);
+      console.log("Trajectory's last point:", trajPtsAU[trajPtsAU.length - 1]);
+
+      // draw trajectory in world coords (AU -> map pixels)
+      if (trajPtsAU && trajPtsAU.length > 1) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([0.006, 0.004]); // dashed line in canvas units (world units scaled by ctx)
+        ctx.lineWidth = 1 / zoom;
+        ctx.strokeStyle = 'cyan';
+
+        for (let i = 0; i < trajPtsAU.length; i++) {
+          const p = trajPtsAU[i];
+          const px = p.x * AU_TO_PIXEL_SCALE;
+          const py = p.z * AU_TO_PIXEL_SCALE;
+
+          if (i === 0 || i === trajPtsAU.length - 1) {
+            console.log(`Trajectory point ${i} in PixelScale: (${px}, ${py})`);
+          }
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        console.log(`Spaceraft's position in PixelScale: ${spacecraftPixelX}, ${spacecraftPixelY}`);
+
+        ctx.stroke();
+        ctx.setLineDash([]); // reset
+        ctx.restore();
+      }
+
       // Draw spacecraft
       ctx.beginPath();
       ctx.arc(spacecraftPixelX, spacecraftPixelY, 5 / zoom, 0, Math.PI * 2);
       ctx.fillStyle = 'red';
       ctx.fill();
       ctx.closePath();
-
       ctx.restore();
+
       animationFrameId = requestAnimationFrame(render);
     };
 
@@ -332,17 +385,6 @@ const NavigationMap = ({ spacecraft, gameTime }) => {
         </div>
       )}
 
-      <div className="absolute top-4 left-4 bg-gray-900/60 border-gray-700/50 text-gray-300 p-4 rounded-lg shadow-lg backdrop-blur-md w-80">
-        <h3 className="text-lg font-bold mb-2">Navigation Mode</h3>
-        <div className="text-sm mb-2">
-          <p>
-            Current Fuel: 583.33 <span className="text-yellow-400">&#x2605;</span>
-          </p>
-          <p>
-            Required Fuel: 0.00 <span className="text-yellow-400">&#x2605;</span>
-          </p>
-        </div>
-      </div>
     </div>
   );
 };

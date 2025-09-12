@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { setupScene } from './sceneSetup';
-import { initCannonWorld, gravitationalForce, applyOrbitalForces, applyForceToBody } from '../../utils/physicsUtils';
+import { initCannonWorld, gravitationalForce, applyOrbitalForces, applyForceToBody, AU_TO_METERS } from '../../utils/physicsUtils';
 import * as CANNON from 'cannon-es';
 import { CELESTIAL_BODIES } from '@/entities/CelestialBodies';
 import { setupLighting } from './lightingSetup';
@@ -18,7 +18,6 @@ import { handleKeyDown, handleKeyUp, keysPressed,
 import { setupOrbitControls } from './orbitalControlSetup';
 import CannonDebugger from 'cannon-es-debugger';
 import { ThirdPersonCamera, FirstPersonCamera } from './cameraSetup';
-import { computeTrajectory } from '../../utils/trajectory' 
 
 const scaler = new SpaceScaler();
 
@@ -180,10 +179,7 @@ export default function SpaceRenderer({
     var tick = 0;
     const animate = () => {
       tick++;
-      // if (tick % 300 === 0) {
-      //   console.log(`Tick: ${tick}`);
-      // }
-      console.log(`Tick: ${tick}`);
+      // console.log(`Tick: ${tick}`);
 
       if (!isPaused && thirdPersonCameraReady) {
         // Update game time
@@ -231,7 +227,7 @@ export default function SpaceRenderer({
           // console.log(` ShipBody's quaternion: ${shipBody.quaternion.toArray()}`);
 
           // Apply thrust to Cannon.js body
-          const thrustPower = 100000000000;
+          const thrustPower = 1000000;
           const thrustDir = getThrustVectorFromKeys(shipBody.quaternion);
           if (thrustDir.lengthSquared() > 0) {
             const thrustVector = thrustDir.scale(thrustPower);
@@ -242,10 +238,9 @@ export default function SpaceRenderer({
           for (const bodyName in celestialBodiesRef.current) {
             const body = celestialBodiesRef.current[bodyName];
             if (shipBody && shipData && body.bodyData) {
-              console.log(`Applying gravity pull to ${shipData.name} from ${bodyName}`);
-
-              console.log(`Ship mass: ${shipData.mass} kg`);
-              console.log( `${bodyName} mass: ${body.bodyData.mass} kg`);
+              // console.log(`Applying gravity pull to ${shipData.name} from ${bodyName}`);
+              // console.log(`Ship mass: ${shipData.mass} kg`);
+              // console.log( `${bodyName} mass: ${body.bodyData.mass} kg`);
 
               const force = gravitationalForce( 
                 shipData.position, // Spacecraft position
@@ -253,7 +248,7 @@ export default function SpaceRenderer({
                 body.bodyData.position, // Celestial body position
                 body.bodyData.mass // Celestial body mass
               );
-              console.log("Gravitational force:", force);
+              // console.log("Gravitational force:", force);
               
               const cannonForce = new CANNON.Vec3(force.x, force.y, force.z);
               applyForceToBody(shipBody, cannonForce);
@@ -285,29 +280,6 @@ export default function SpaceRenderer({
         // onSpacecraftUpdate;
         onSpacecraftUpdate(selectedSpacecraftRef.current.data);
         controlsRef.current.target.copy(selectedSpacecraftRef.current.model.position);
-
-        // Path prediction
-        const points = computeTrajectory(selectedSpacecraftRef.current.body, Object.values(CELESTIAL_BODIES));
-
-        // Convert CANNON.Vec3 -> THREE.Vector3
-        const points3 = points.map(p => new THREE.Vector3(p.x, p.y, p.z));
-
-        // Create geometry and line
-        const geometry = new THREE.BufferGeometry().setFromPoints(points3);
-        const material = new THREE.LineDashedMaterial({ color: 0x00ffff, dashSize: 2, gapSize: 2 });
-        const trajectoryLine = new THREE.Line(geometry, material);
-
-        // Clear previous trajectory to avoid stacking lines
-        if (scene.getObjectByName('trajectoryLine')) {
-            const oldLine = scene.getObjectByName('trajectoryLine');
-            scene.remove(oldLine);
-            oldLine.geometry.dispose();
-            oldLine.material.dispose();
-        }
-        trajectoryLine.name = 'trajectoryLine';
-        scene.add(trajectoryLine);
-
-        
 
         // Update renderer and camera
         controlsRef.current.update();

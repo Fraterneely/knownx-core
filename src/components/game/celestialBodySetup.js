@@ -321,7 +321,7 @@ export function setupCelestialBodies(world, scene, camera, celestialBodiesMatera
         orbitLine.rotation.x = body.orbitalInclination * Math.PI / 180;
       }
 
-      scene.add(orbitLine);
+      // scene.add(orbitLine);
       orbitRefs.current[key] = orbitLine;
     }
   });
