@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { PanelRightOpen } from 'lucide-react';
 import NavigationMap from '../components/game/NavigationMap';
 
+
 export default function SpaceExplorer() {
   const [spacecraftList, setSpacecraftList] = useState(null);
   const [spacecraft, setSpacecraft] = useState(null);
@@ -22,6 +23,7 @@ export default function SpaceExplorer() {
   const [showControls, setShowControls] = useState(true);
   const [showHUD, setShowHUD] = useState(false);
   const [showNavigationMap, setShowNavigationMap] = useState(false);
+
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -211,12 +213,13 @@ export default function SpaceExplorer() {
         targetBody={spacecraft.target_body}
         isPaused={isPaused || gameOverReason}
         timeScale={timeScale}
+        setTimeScale={setTimeScale}
         className="absolute inset-0 z-0"
       />
 
       {/* Game UI Overlay */}
       <div
-        className="absolute inset-0 z-1 pointer-events-auto"
+        className="absolute inset-0 z-1 pointer-events-none"
       >
         {showHUD && (
           <SpacecraftHUD
@@ -286,6 +289,7 @@ export default function SpaceExplorer() {
             Map
           </Button>
         </div>}
+
       </div>
     </div>
   );

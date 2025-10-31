@@ -11,7 +11,7 @@ import {
   Settings, Navigation, Zap, Play, Pause, FastForward, 
   RotateCcw, PanelRightClose, Target, Compass, Gauge
 } from 'lucide-react';
-import VelocityDisplay from '../../utils/utils';
+import { VelocityDisplay, AccelerationDisplay } from '../../utils/utils';
 
 // List of celestial bodies for targeting
 const CELESTIAL_BODIES = [
@@ -271,6 +271,7 @@ export default function ControlPanel({
             </div>
             <div>
               <VelocityDisplay velocity={spacecraft.velocity} />
+              <AccelerationDisplay acceleration={spacecraft.acceleration} />
             </div>
           </div>
           

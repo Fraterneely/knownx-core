@@ -15,7 +15,7 @@ const G_AU = G_SI / (AU_IN_METERS ** 3);   // (AU^3 / m^3) * m^3/s^2 / m^3 => AU
  *
  * Returns array of positions {x,y,z} in AU
  */
-export function computeTrajectoryAU(shipPosAU, shipVelAU, bodies, steps = 10000, dt = 10, stopOnImpact = true) {
+export function computeTrajectoryAU(shipPosAU, shipVelAU, bodies, steps = 40000, dt = 10, stopOnImpact = true) {
   const pts = [];
 
   // small helpers

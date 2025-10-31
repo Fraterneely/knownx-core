@@ -6,7 +6,7 @@ export function setupStarfield(scene) {
   const starColors = [];
   const starSizes = [];
 
-  for (let i = 0; i < 100000; i++) {
+  for (let i = 0; i < 1000; i++) {
     const x = (Math.random() - 0.5) * 10000;
     const y = (Math.random() - 0.5) * 10000;
     const z = (Math.random() - 0.5) * 10000;

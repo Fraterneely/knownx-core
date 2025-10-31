@@ -5,6 +5,16 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 export function setupScene(mountRef) {
+  console.log('🎬 setupScene called');
+  console.log('Existing canvases:', document.querySelectorAll('canvas').length);
+
+  // Check if canvas already exists
+  const existingCanvas = mountRef.current?.querySelector('canvas');
+  if (existingCanvas) {
+    console.warn('Canvas already exists, cleaning up...');
+    existingCanvas.remove();
+  }
+
   // Scene setup
   const scene = new THREE.Scene();
   
@@ -22,8 +32,7 @@ export function setupScene(mountRef) {
   textureLoader.load(
     texturePaths,
     (texture) => {
-      console.log('Background textures loaded successfully');
-      scene.background = texture;
+      // scene.background = texture;
     },
     (progress) => {
       console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
@@ -39,7 +48,7 @@ export function setupScene(mountRef) {
 
   // Audio setup (optional)
   const listener = new THREE.AudioListener();
-  // camera.add(listener);
+  camera.add(listener);
 
   const sound = new THREE.PositionalAudio(listener);
   const audioLoader = new THREE.AudioLoader();
@@ -69,6 +78,19 @@ export function setupScene(mountRef) {
     0.85  // threshold
   );
   composer.addPass(bloomPass);
+
+  renderer.debug.checkShaderErrors = true;
+
+  // Also add this to catch shader errors:
+  renderer.domElement.addEventListener('webglcontextlost', (event) => {
+    console.error('WebGL context lost!', event);
+    event.preventDefault();
+  });  
+
+  // Log renderer info
+  console.log('Max textures:', renderer.capabilities.maxTextures);
+  console.log('Max vertex uniforms:', renderer.capabilities.maxVertexUniforms);
+  console.log('Max fragment uniforms:', renderer.capabilities.maxFragmentUniforms);
 
   return { scene, camera, renderer, composer, audioLoader, sound };
 }

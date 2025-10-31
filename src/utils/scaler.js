@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
 export class SpaceScaler {
-  constructor(scaleFactor = 100) {
-    this.SCALE_X = scaleFactor;
+  constructor(scaleFactor = 1) {
+    this.SCALE_X = scaleFactor; 
   }
 
-  // Scale a scalar value (e.g., radius)
+  // Scale a scalar value (e.g., radius) 
   scaleValue(value) {
     return value * this.SCALE_X;
   }

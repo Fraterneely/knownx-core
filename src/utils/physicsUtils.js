@@ -1,24 +1,21 @@
 import * as CANNON from 'cannon-es';
 import * as THREE from 'three';
 import CannonDebugger from 'cannon-es-debugger';
+import { SpaceScaler } from './scaler';
 
-// Gravitational Constant (real value, for accurate physics simulation)
-export const G = 6.67408e-11; // m^3 kg^-1 s^-2
-export const AU_TO_METERS = 1.49598e11; // 1 AU in meters
-export const FORCE_SCALE = 1 / AU_TO_METERS; // scale N·m → AU·kg/s²
+const scaler = new SpaceScaler();
+
+// 1 AU in meters
+export const AU_TO_METERS = 1.49598e11;
+
+// Gravitational Constant
+export const G_SI = 6.67408e-11; // m^3 kg^-1 s^-2
+export const G_AU = G_SI / (AU_TO_METERS ** 3); // AU^3 kg^-1 s^-2
+export const G_SCALED = G_AU * (scaler.SCALE_X ** 2); // Scaled for Simulation rendering
 
 export function toMeters(vAU) {
   return vAU.clone().multiplyScalar(AU_TO_METERS);
 }
-
-/**
- * Calculates the gravitational force between two celestial bodies.
- * @param {THREE.Vector3} body1Position - Position of the first body.
- * @param {number} body1Mass - Mass of the first body.
- * @param {THREE.Vector3} body2Position - Position of the second body.
- * @param {number} body2Mass - Mass of the second body.
- * @returns {THREE.Vector3} The gravitational force vector.
- */
 
 export function initCannonWorld (scene){
     const world = new CANNON.World();
@@ -44,19 +41,23 @@ export function initCannonWorld (scene){
     return {world, cannonDebugger, celestialBodiesMaterail, spacecraftsMaterial};
 };
 
+/**
+ * Calculates the gravitational force between two celestial bodies.
+ * @param {THREE.Vector3} body1Position - Position of the first body.
+ * @param {number} body1Mass - Mass of the first body.
+ * @param {THREE.Vector3} body2Position - Position of the second body.
+ * @param {number} body2Mass - Mass of the second body.
+ * @returns {THREE.Vector3} The gravitational force vector.
+ */
 export function gravitationalForce(body1PosAU, m1, body2PosAU, m2) {
-  const p1 = toMeters(body1PosAU);
-  const p2 = toMeters(body2PosAU);
-
-  const rVec = p2.clone().sub(p1);          // meters
-  // console.log(`rVec: (${rVec.toArray()})`);
-  const r = rVec.length();
-  // console.log(`r: ${r} m`);
-  const dir = rVec.clone().divideScalar(r); // unitless
-  // console.log(`direction: ${dir.toArray()}`);
-  const mag = G * m1 * m2 / (r*r);          // newtons
-  // console.log(`Force Mag: ${mag} N`);
-  return dir.multiplyScalar(mag);           // N vector on body1
+  const p1 = body1PosAU;  // Position in AU
+  const p2 = body2PosAU;  // Position in AU
+  
+  const rVec = p2.clone().sub(p1);                    // Vector in AU
+  const r = rVec.length();                         // Distance in AU
+  const dir = rVec.clone().divideScalar(r);        // ✓ Unit vector (unitless)
+  const mag = G_SCALED * m1 * m2 / (r * r); // Force magnitude
+  return dir.multiplyScalar(mag);                     // Force vector
 }
 
 /**
@@ -106,6 +107,6 @@ export function calculateThrustForce(direction, magnitude) {
  * @param {THREE.Vector3} force - The force vector to apply.
  */
 export function applyForceToBody(body, force) {
-  const scaledForce = new CANNON.Vec3(force.x, force.y, force.z).scale(FORCE_SCALE);
-  body.applyForce(scaledForce);
+  const amplifiedForce = new CANNON.Vec3(force.x, force.y, force.z);
+  body.applyForce(amplifiedForce);
 }

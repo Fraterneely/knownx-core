@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useState } from "react";
+import { AU_TO_METERS } from './physicsUtils';
 
 /**
  * A utility function that merges multiple class names together,
@@ -34,11 +35,11 @@ export const getStatusColor = (current, max) => {
 
 const AU_IN_KM = 149597870.7;
 
-function VelocityDisplay({ velocity }) {
-  const [unit, setUnit] = useState("km/h");
+export function VelocityDisplay({ velocity }) {
+  const [unit, setUnit] = useState("m/s");
 
-  // Compute velocity magnitude in AU/sec
-  const velAuPerSec = Math.sqrt(
+  // Compute velocity magnitude in m/s
+  const velMeterPerSec = Math.sqrt(
     velocity.x ** 2 +
     velocity.y ** 2 +
     velocity.z ** 2
@@ -46,12 +47,16 @@ function VelocityDisplay({ velocity }) {
 
   // Convert based on unit
   let displayValue = 0;
-  if (unit === "km/h") {
-    displayValue = velAuPerSec * AU_IN_KM * 3600;
+  if (unit === "m/s") {
+    displayValue = velMeterPerSec;
+  } else if (unit === "km/h") {
+    displayValue = velMeterPerSec * 3600;
   } else if (unit === "km/s") {
-    displayValue = velAuPerSec * AU_IN_KM;
+    displayValue = velMeterPerSec / 1000;
+  } else if (unit === "AU/s") {
+    displayValue = velMeterPerSec / AU_TO_METERS;
   } else if (unit === "AU/day") {
-    displayValue = velAuPerSec * 86400; // 86400 sec in a day
+    displayValue = velMeterPerSec * 86400 / AU_IN_KM; // 86400 sec in a day
   }
 
   return (
@@ -70,9 +75,11 @@ function VelocityDisplay({ velocity }) {
           onChange={(e) => setUnit(e.target.value)}
           className="appearance-none bg-transparent border-none text-white py-1 pl-3 pr-8 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
         >
+          <option value="m/s">m/s</option>  
           <option value="km/h">km/h</option>
-          <option value="km/s">km/s</option>
           <option value="AU/day">AU/day</option>
+          <option value="km/s">km/s</option>
+          <option value="AU/s">AU/s</option>
         </select>
         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
           <svg
@@ -88,4 +95,55 @@ function VelocityDisplay({ velocity }) {
   );
 }
 
-export default VelocityDisplay;
+export function AccelerationDisplay({ acceleration }) {
+  const [unit, setUnit] = useState("m/s^2");
+
+  // Compute acceleration magnitude in m/s^2
+  const accMeterPerSecSq = Math.sqrt(
+    acceleration.x ** 2 +
+    acceleration.y ** 2 +
+    acceleration.z ** 2
+  );
+  
+  // Convert based on unit
+  let displayValue = 0;
+  if (unit === "m/s^2") {
+    displayValue = accMeterPerSecSq;
+  } else if (unit === "km/s^2") {
+    displayValue = accMeterPerSecSq / 1000;
+  } else if (unit === "AU/s^2") {
+    displayValue = accMeterPerSecSq / AU_TO_METERS;
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <div className="flex items-center gap-1">
+        <span>Acceleration:</span>
+        <span className="font-mono text-lg font-bold">
+          {displayValue.toFixed(4)} {unit}
+        </span>
+      </div>
+      {/* Switcher */}
+      <div className="relative inline-flex items-center rounded-md shadow-sm bg-gray-800">
+        <select
+          value={unit}
+          onChange={(e) => setUnit(e.target.value)}
+          className="appearance-none bg-transparent border-none text-white py-1 pl-3 pr-8 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+        >
+          <option value="m/s^2">m/s^2</option>  
+          <option value="km/s^2">km/s^2</option>
+          <option value="AU/s^2">AU/s^2</option>
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+          <svg
+            className="fill-current h-4 w-4"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+          >
+            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}

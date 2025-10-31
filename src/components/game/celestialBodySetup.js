@@ -2,12 +2,14 @@ import * as THREE from 'three';
 import { SpaceScaler } from '../../utils/scaler';
 import { CELESTIAL_BODIES, NON_SOLID_TYPES } from '../../entities/CelestialBodies';
 import * as CANNON from 'cannon-es';
+import { setupPlanetAtmosphere } from '../../utils/atmosphereHelper';
+import { addAtmosphereDebugWireframes, logAtmosphereSetup } from '../../utils/atmosphereDebug';
 
 const scaler = new SpaceScaler();
 
-export function setupCelestialBodies(world, scene, camera, celestialBodiesMaterail, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress ) {
+export function setupCelestialBodies(world, renderer, scene, camera, celestialBodiesMaterail, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress ) {
   Object.entries(CELESTIAL_BODIES).forEach(([key, body]) => {
-    const geometry = new THREE.IcosahedronGeometry(scaler.scaleValue(body.radius) , 16);
+    const geometry = new THREE.IcosahedronGeometry(scaler.scaleValue(body.radius) , 128);
     const bodyGroup = new THREE.Group();
 
     // Axial Tilt
@@ -30,8 +32,7 @@ export function setupCelestialBodies(world, scene, camera, celestialBodiesMatera
     if (body.texture) {
       const texture = textureLoader.current.load(
         body.texture, 
-        (loadedTexture) => {
-          // console.log(`Successfully loaded texture for ${body.name}`);
+        () => {
           setLoadingProgress(prev => ({
             ...prev,
             textures: {
@@ -55,21 +56,77 @@ export function setupCelestialBodies(world, scene, camera, celestialBodiesMatera
         }
       );
 
-      if (body.normalMap && body.bumpMap) {
-        const normalMap = textureLoader.current.load(body.normalMap);
-        const bumpMap = textureLoader.current.load(body.bumpMap);
+      if (body.normalMap && body.specMap) {
+        const normalMap = textureLoader.current.load(
+          body.normalMap, 
+          () => {   
+            setLoadingProgress(prev => ({
+              ...prev,
+              textures: {
+                ...prev.textures,
+                [key]: 'loaded'
+              }
+            }));
+          },
+          undefined,
+          (error) => {
+            console.error(`Failed to load Normal Map for ${body.name}:`, error);
+            setLoadingProgress(prev => ({
+              ...prev,
+              textures: {
+                ...prev.textures,
+                [key]: 'failed'
+              }
+            }));
+          }
+        );
 
-        material = new THREE.MeshStandardMaterial({
-          map: texture,
-          normalMap: normalMap,
-          bumpMap: bumpMap,
-          bumpScale: 0.5,
-          color: body.color,
-          emissive: body.type === 'star' ? body.color : 0x000000,
-          emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 0.3) : 0,
+        const specularMap = textureLoader.current.load(
+          body.specMap, 
+          () => {   
+            setLoadingProgress(prev => ({
+              ...prev,
+              textures: {
+                ...prev.textures,
+                [key]: 'loaded'
+              }
+            }));
+          },
+          undefined,
+          (error) => {
+            console.error(`Failed to load Specular Map for ${body.name}:`, error);
+            setLoadingProgress(prev => ({
+              ...prev,
+              textures: {
+                ...prev.textures,
+                [key]: 'failed'
+              }
+            }));
+          }
+        );
+
+        // Create advanced material with all maps
+        material = new THREE.MeshPhongMaterial({
+          map: texture,              // Daytime surface texture
+          bumpMap: normalMap,             // Terrain elevation
+          bumpScale: 5,              // Adjust for visible terrain
+          normalMap: normalMap,           // Also use as normal map
+          normalScale: new THREE.Vector2(10, 10), // Enhance terrain detail
+          specularMap: specularMap,     // Shiny oceans
+          specular: new THREE.Color(0x333333), // Ocean reflection color
+          shininess: 50,                // Ocean shininess       // City lights
+          emissive: body.color,
+          emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 10) : 0.005,
+        });
+        
+        // Apply high-res settings
+        [texture, normalMap, specularMap].forEach(tex => {
+          tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); // Max quality
+          tex.minFilter = THREE.LinearMipmapLinearFilter;
+          tex.magFilter = THREE.LinearFilter;
         });
       } else{
-        material = new THREE.MeshStandardMaterial({
+        material = new THREE.MeshPhongMaterial({
           map: texture,
           color: body.color,
           emissive: body.type === 'star' ? body.color : 0x000000,
@@ -85,8 +142,7 @@ export function setupCelestialBodies(world, scene, camera, celestialBodiesMatera
     }
 
     const mesh = new THREE.Mesh(geometry, material);
-    scaler.positionMesh(mesh, body.position);
-    mesh.userData = { bodyData: body, bodyKey: key };
+    mesh.userData = { data: body, bodyKey: key };
     bodyGroup.add(mesh);
 
     // Shadows
@@ -100,34 +156,21 @@ export function setupCelestialBodies(world, scene, camera, celestialBodiesMatera
 
     // Glow for stars Add a little pulsating effect
     if (body.type === "star") {
-      const glowGeometry = new THREE.SphereGeometry(scaler.scaleValue(body.radius * 1.08), 64, 64);
-      const glowMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(body.color),
-        transparent: true,
-        opacity: 0.15,
-        side: THREE.BackSide,
-        depthWrite: false,
-      });
-
-      const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
-      scaler.positionMesh(glowMesh, body.position);
-      bodyGroup.add(glowMesh);
-
       // Load flare texture (PNG with transparency)
       const flareTexture = textureLoader.current.load('/textures/lensFlares/sun.png');
 
       const flareMaterial = new THREE.SpriteMaterial({
         map: flareTexture,
         transparent: true,
-        opacity: 0.8,
+        opacity: 1,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       });
 
       const flareSprite = new THREE.Sprite(flareMaterial);
       flareSprite.scale.set(
-        scaler.scaleValue(body.radius * 60), 
-        scaler.scaleValue(body.radius * 60), 
+        scaler.scaleValue(body.radius * 50), 
+        scaler.scaleValue(body.radius * 50), 
         1
       );
 
@@ -143,25 +186,16 @@ export function setupCelestialBodies(world, scene, camera, celestialBodiesMatera
         flareSprite.scale.set(base * s * 0.8, base * s * 0.8, 1);
       }
 
-
       // Animate flicker
       function animateFlare() {
-        const time = performance.now() * 0.0002;
+        const time = performance.now() * 0.02;
         flareSprite.material.opacity = 1 + Math.sin(time) * 0.01;
         flareSprite.rotateX(1);
         requestAnimationFrame(animateFlare);
       }
 
-      function animateStar() {
-        const time = performance.now() * 0.001;
-        const scale = 1 + Math.sin(time * 2.5) * 0.01;
-        mesh.scale.set(scale, scale, scale);
-        glowMesh.scale.set(scale * 1.08, scale * 1.08, scale * 1.08);
-        requestAnimationFrame(animateStar);
-      }
-
       animateFlare();
-      // animateStar();
+      updateFlare();
     }
 
     // City lights
@@ -193,76 +227,53 @@ export function setupCelestialBodies(world, scene, camera, celestialBodiesMatera
         blending: THREE.AdditiveBlending
       })
       const citylightsMesh = new THREE.Mesh(geometry, lightsMat);
-      scaler.positionMesh(citylightsMesh, body.position);
       bodyGroup.add(citylightsMesh);
     }
 
-    // Clouds
-    if (body.clouds) {
-      const cloudsGeometry = new THREE.SphereGeometry(
-        scaler.scaleValue(body.radius * 1.02),
-        64,
-        64
-      );
-      const cloudsTexture  = textureLoader.current.load(
-        body.clouds.texture,
-        () => {
-          setLoadingProgress(prev => ({
-            ...prev,
-            cloudsTextures: {
-              ...prev.cloudsTextures,
-              [key]: 'loaded'
-            }
-          }));
-        },
-        undefined,
-        (error) => {
-          console.error(`Failed to load cloud texture for ${body.name}:`, error);
-          setLoadingProgress(prev => ({
-            ...prev,
-            cloudsTextures: {
-              ...prev.cloudsTextures,
-              [key]: 'failed'
-            }
-          }));
+    if (body.atmosphere || body.clouds) {
+      // 1. Get star position (find the star in celestial bodies)
+      let starPosition = new THREE.Vector3(0, 0, 0);
+      Object.entries(CELESTIAL_BODIES).forEach(([starKey, starBody]) => {
+        if (starBody.type === 'star') {
+          starPosition = scaler.scaleVector(starBody.position);
         }
-      );
-      const cloudsMaterial = new THREE.MeshPhongMaterial({
-        map: cloudsTexture,
-        transparent: true,
-        opacity: 0.8,
-        side: THREE.DoubleSide
       });
-      const cloudsMesh = new THREE.Mesh(cloudsGeometry, cloudsMaterial);
-      scaler.positionMesh(cloudsMesh, body.position);
-      bodyGroup.add(cloudsMesh);
-      cloudsRefs.current[key] = cloudsMesh;
+
+      // Auto-setup based on planet type
+      const atmosphereData = setupPlanetAtmosphere(
+        bodyGroup, 
+        key,
+        body, 
+        scaler, 
+        textureLoader.current, 
+        starPosition,
+        setLoadingProgress
+      );
+
+      // Store references
+      if (atmosphereData.atmosphere || atmosphereData.skyDome) {
+        atmosphereRefs.current[key] = {
+          atmosphere: atmosphereData.atmosphere,
+          skyDome: atmosphereData.skyDome
+        };
+      }
+      
+      if (atmosphereData.clouds) {
+        cloudsRefs.current[key] = atmosphereData.clouds;
+      }
     }
 
-    // Atmosphere
-    if (body.atmosphere) {
-      const atmosphereGeometry = new THREE.SphereGeometry(
-        scaler.scaleValue(body.radius * 1.05),
-        64,
-        64
-      );
-      const atmosphereMaterial = new THREE.MeshPhongMaterial({
-        color: body.atmosphere.color,
-        transparent: true,
-        opacity: body.atmosphere.opacity,
-        side: THREE.DoubleSide
-      });
-      const atmosphereMesh = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
-      bodyGroup.add(atmosphereMesh);
-      atmosphereRefs.current[key] = atmosphereMesh;
-    }
+    // logAtmosphereSetup(body, scaler);
+    // if (atmosphereRefs.current[key] && atmosphereRefs.current[key].atmosphere && cloudsRefs.current[key] && cloudsRefs.current[key].altitudes) {
+    //   addAtmosphereDebugWireframes(bodyGroup, scaler.scaleValue(body.radius), scaler.scaleValue(atmosphereRefs.current[key].atmosphere.height), cloudsRefs.current[key].altitudes.map(altitude => scaler.scaleValue(altitude)));
+    // }
 
     // Create Cannon.js body for celestial body
     const cannonBody = new CANNON.Body({
       mass: 0, // Set mass to 0 for static bodies like stars and planets
       shape: new CANNON.Sphere(scaler.scaleValue(body.radius)),
       material: celestialBodiesMaterail,
-      position: new CANNON.Vec3(mesh.position.x, mesh.position.y, mesh.position.z)
+      position: new CANNON.Vec3(scaler.scaleValue(body.position.x), scaler.scaleValue(body.position.y), scaler.scaleValue(body.position.z))
     });
     world.addBody(cannonBody);
 
@@ -270,11 +281,8 @@ export function setupCelestialBodies(world, scene, camera, celestialBodiesMatera
     celestialBodiesRef.current[key] = {
       bodyMesh: bodyGroup,
       bodyBody: cannonBody,
-      bodyData: body,
+      data: body,
     };
-    // console.log(`Celestial bodies are setted (Mesh Position) : ${celestialBodiesRef.current[key].bodyMesh.position.toArray()}`);
-    // console.log(`Celestial bodies are setted (Body Position) : ${celestialBodiesRef.current[key].bodyBody.position.toArray()}`);
-    // console.log(`Celestial bodies are setted (Body Mass) : ${celestialBodiesRef.current[key].bodyBody.mass}`)
 
     // Otbit Line
     if (body.orbitalRadius) {

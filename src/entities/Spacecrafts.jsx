@@ -15,20 +15,18 @@ const scaler = new SpaceScaler();
  */
 export async function loadAllSpacecraftModels(world, scene, spacecraftsMaterial, spacecraftLists, spacecraftRef, selectedSpacecraftRef, setLoadingProgress) {
   const spacecraftList = spacecraftLists; 
-  console.log('Starting spacecrafts loading ...');
+  // console.log('Starting spacecrafts loading ...');
   const loadPromises = spacecraftList.map((sc, index) => {
     return new Promise((resolve, reject) => {
 
-      console.log("Found craft named " + sc.name)
-      console.log(`Loading a ${sc.name}'s 3D Model...`);
+      // console.log("Found craft named " + sc.name)
+      // console.log(`Loading a ${sc.name}'s 3D Model...`);
 
       // Spacecraft body for physics engine
-      const shipSize = scaler.scaleValue(sc.size.x, sc.size.y, sc.size.z) || 1;
-      console.log(`Scaled Ship size is ${shipSize}`);
       const body = new CANNON.Body({
         mass: sc.mass,
         position: new CANNON.Vec3(scaler.scaleValue(sc.position.x), scaler.scaleValue(sc.position.y), scaler.scaleValue(sc.position.z)),
-        shape: new CANNON.Box(new CANNON.Vec3(shipSize.x, shipSize.y, shipSize.z)),
+        shape: new CANNON.Box(new CANNON.Vec3(scaler.scaleValue(sc.size.x), scaler.scaleValue(sc.size.y), scaler.scaleValue(sc.size.z))),
         material: spacecraftsMaterial,
         velocity: new CANNON.Vec3(0, 0, 0),
         angularVelocity: new CANNON.Vec3(0, 0, 0),
@@ -41,16 +39,21 @@ export async function loadAllSpacecraftModels(world, scene, spacecraftsMaterial,
 
       // Spacecraft model for rendering
       loader.load(
-        '/models/spacecrafts/spaceship_low_poly.glb',
+        // '/models/spacecrafts/spaceship_low_poly.glb',
+        '/models/spacecrafts/d.s.s._harbinger_battle_cruiser.glb',
         (gltf) => {
-          console.log(`Spacecraft ${sc.name}'s 3D Model is loaded successfully`);
+          // console.log(`Spacecraft ${sc.name}'s 3D Model is loaded successfully`);
           const model = gltf.scene;
           scaler.scaleMesh(model, sc.size);
+          model.rotation.y =  Math.PI / 2;
+          model.castShadow = true;
+          model.receiveShadow = true;
 
           const spacecraft = new THREE.Object3D();
-          spacecraft.add(model);
+          spacecraft.add(model); 
+          spacecraft.castShadow = true;
+          spacecraft.receiveShadow = true;
           scaler.positionMesh(spacecraft, sc.position);
-          // spacecraft.rotation.z =  Math.PI / 2
 
           scene.add(spacecraft);
 
@@ -60,11 +63,6 @@ export async function loadAllSpacecraftModels(world, scene, spacecraftsMaterial,
             data: sc // The full Spacecraft object
           };
           spacecraftRef.current.set(sc.name, spacecraftWrapper);
-          // console.log(`Spacecraft Wrapper is setted (Body Pos), ${spacecraftWrapper.body.position.toArray()}`);
-          // console.log(`Spacecraft Wrapper is setted (Model Pos), ${spacecraftWrapper.model.position.toArray()}`);
-          // console.log(`Spacecraft Wrapper is setted (Data Pos), ${spacecraftWrapper.data.position.toArray()}`);
-
-
 
           //the FIRST craft
           if (index === 0) {

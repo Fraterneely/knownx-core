@@ -9,12 +9,11 @@ export const CELESTIAL_BODIES = {
     radius: 465.47454e-5, // AU
     color: '#FDB813',
     mass: 1.989e30,
-    // mass: 0,
     type: 'star',
     texture: '/textures/sun.jpg',
     emissive: true,
     emmissiveColor: 'white',
-    emissiveIntensity: 100000,
+    emissiveIntensity: 10,
     rotationPeriod: 27 // days
   },
   mercury: {
@@ -48,8 +47,10 @@ export const CELESTIAL_BODIES = {
     axialTilt: 177.4, // degrees
     parent: 'sun',
     texture: '/textures/venus.jpg',
+    normalMap: '/textures/earth/earth-normal-8k.png',
     atmosphere: {
-      color: '#FFFACD',
+      color: new THREE.Vector3(0.95, 0.85, 0.6), 
+      height: 250000, // 250km in meters
       opacity: 0.8
     }
   },
@@ -66,18 +67,23 @@ export const CELESTIAL_BODIES = {
     orbitalEccentricity: 0.017,
     rotationPeriod: 1, // days
     axialTilt: 23.44, // degrees
-    parent: 'sun',
-    texture: '/textures/earth/earthmap1k.jpg',
-    // normalMap: '/textures/earth/earth-normal-8k.png',
-    // bumpMap: '/textures/earth/earthbump1k.jpg',
-    // citylightsTexture: '/textures/earth/earthlights4k.png',
+    parent: 'sun', 
+    texture: '/textures/earth/earthmap5k.png',
+    normalMap: '/textures/earth/earth-normal-8k.png',
+    specMap: '/textures/earth/earthspec1k.jpg',
+    citylightsTexture: '/textures/earth/earthlights4k.png',
     atmosphere: {
-      color: '#ADD8E6',
-      opacity: 0.3
+      color: new THREE.Vector3(0.3, 0.72, 1.0),
+      opacity: 0.3,
+      height: 100000
     },
     clouds: {
-      texture: '/textures/earth_clouds.png',
-      speed: 0.0005
+      texture: '/textures/earth/cloud_combined_2048.jpg',
+      lowAltitude: 2000,     // meters
+      highAltitude: 10000,   // meters
+      coverage: 0.5,         // 0-1
+      density: 0.85,         // 0-1
+      windSpeed: 0.0002
     }
   },
   moon: {
@@ -94,7 +100,8 @@ export const CELESTIAL_BODIES = {
     rotationPeriod: 27.32, // days (tidally locked)
     axialTilt: 6.68, // degrees
     parent: 'earth',
-    texture: '/textures/moon.jpg'
+    texture: '/textures/moon/moon.jpg',
+    normalMap: '/textures/moon/moonbump1k.jpg',
   },
   mars: {
     name: 'Mars',
@@ -110,16 +117,18 @@ export const CELESTIAL_BODIES = {
     rotationPeriod: 1.03, // days
     axialTilt: 25.19, // degrees
     parent: 'sun',
-    texture: '/textures/mars.jpg',
+    texture: '/textures/mars/mars_1k_color.jpg',
+    normalMap: '/textures/mars/mars_1k_normal.jpg',
     atmosphere: {
-      color: '#FFE4B5',
+      color: new THREE.Vector3(0.9, 0.6, 0.4),
+      height: 80000, // 80km in meters
       opacity: 0.1
     }
   },
   jupiter: {
     name: 'Jupiter',
     position: new Vector3 (5.2, 0, 0),
-    radius: 4.6732617e-5, // AU
+    radius: 47.8100e-5,
     color: '#D8CA9D',
     mass: 1.898e27,
     type: 'planet',
@@ -146,7 +155,10 @@ export const CELESTIAL_BODIES = {
     rotationPeriod: 0.67, // days
     axialTilt: 28.32, // degrees
     parent: 'sun',
-    texture: '/textures/neptune.jpg'
+    texture: '/textures/neptune.jpg',
+    atmosphere: {
+      color: new THREE.Vector3(0.2, 0.4, 0.8),   // Deep blue
+    }
   },
   uranus: {
     name: 'Uranus',

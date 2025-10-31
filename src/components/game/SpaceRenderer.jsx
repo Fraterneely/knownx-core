@@ -14,10 +14,15 @@ import { loadAllSpacecraftModels, updatePosition,
 import { SpaceScaler } from '../../utils/scaler';
 import { setupStarfield } from './starfieldSetup';
 import { handleKeyDown, handleKeyUp, keysPressed, 
-        getThrustVectorFromKeys, getRotationDeltaFromKeys } from './spacecraftControls';
+        getThrustVectorFromKeys, getRotationDeltaFromKeys, 
+        getThrustFromKeys} from './spacecraftControls';
 import { setupOrbitControls } from './orbitalControlSetup';
 import CannonDebugger from 'cannon-es-debugger';
 import { ThirdPersonCamera, FirstPersonCamera } from './cameraSetup';
+import { LandingSystem, LANDING_PHASES } from './LandingSystem';
+import LandingHUD from '../ui/LandingHUD';
+import OrbitalTargetSelector from '../ui/OrbitalTargetSelector';
+import { updateAllAtmospheres } from '../../utils/atmosphereHelper';
 
 const scaler = new SpaceScaler();
 
@@ -26,12 +31,13 @@ export const useSpacecraftsRef = () => {
   return spacecraftsRef;
 };
 
-export default function SpaceRenderer({ 
+export default function SpaceRenderer({
   spacecraftList,
   onSpacecraftUpdate,
   targetBody,
   isPaused,
-  timeScale 
+  timeScale,
+  onLandingStatusChange
 }) {
   const mountRef = useRef(null);
   const sceneRef = useRef();
@@ -64,6 +70,12 @@ export default function SpaceRenderer({
   const [gameTime, setGameTime] = useState(0);
   const [activeLightsReady, setLightsReady] = useState(false);
   const [thirdPersonCameraReady, setThirdPersonCameraReady] = useState(false);
+  const landingSystemRef = useRef(null);
+  const [landingData, setLandingData] = useState(null);
+  const [showOrbitalSelector, setShowOrbitalSelector] = useState(false);
+  const [orbitalControlActive, setOrbitalControlActive] = useState(false);
+  const [thridPersonCameraActive, setThridPersonCameraActive] = useState(false);
+  const OrbitalTargetBody = useRef(null);
 
   // Effect for initial scene setup (runs once mountRef is available)
   useEffect(() => {
@@ -71,9 +83,11 @@ export default function SpaceRenderer({
 
     const { scene, camera, renderer, composer, audioLoader, sound } = setupScene(mountRef);
     const {world, cannonDebugger, celestialBodiesMaterail, spacecraftsMaterial } = initCannonWorld(scene);
+    const landingSystem = new LandingSystem(scene, camera, composer);
+
     setupLighting(scene, activeLights, setLightsReady); 
     setupStarfield(scene);
-    setupCelestialBodies(world, scene, camera, celestialBodiesMaterail, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress);
+    setupCelestialBodies(world, renderer, scene, camera, celestialBodiesMaterail, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress);
     loadAllSpacecraftModels(world, scene, spacecraftsMaterial, spacecraftList, spacecraftsRef, selectedSpacecraftRef, setLoadingProgress);
 
     sceneRef.current = scene;
@@ -84,8 +98,9 @@ export default function SpaceRenderer({
     celestialBodiesMaterailRef.current = celestialBodiesMaterail;
     spacecraftsMaterialRef.current = spacecraftsMaterial;
     cannonDebuggerRef.current = cannonDebugger;
-    // audioLoaderRef.current = audioLoader;
-    // soundRef.current = sound;
+    audioLoaderRef.current = audioLoader;
+    soundRef.current = sound;
+    landingSystemRef.current = landingSystem;
 
     // Cleanup for initial setup
     return () => {
@@ -119,11 +134,13 @@ export default function SpaceRenderer({
     const allModelsLoaded = totalExpectedModels === 0 || loadedModelCount === totalExpectedModels;
     const allAssetsLoaded = allTexturesLoaded && allCitylightsTexturesLoaded && allCloudsTexturesLoaded && allModelsLoaded;
 
-    const allRequiredRefsPopulated = selectedSpacecraftRef.current;
-
-    if (allAssetsLoaded && selectedSpacecraftRef.current?.model && thirdPersonCameraReady) {
+    if (allAssetsLoaded && selectedSpacecraftRef.current?.model) {
       setSceneReady(true);
-      controlsRef.current = setupOrbitControls(cameraRef.current, rendererRef.current);
+      // when sceneReady
+      const { controls, setTargetAndRange } = setupOrbitControls(cameraRef.current, rendererRef.current.domElement);
+      controlsRef.current = controls;
+      controlsRef.current.setTargetAndRange = setTargetAndRange; // attach helper for convenience
+
     } else {
       setSceneReady(false);
     }
@@ -132,20 +149,19 @@ export default function SpaceRenderer({
 
   // Create third person camera
   useEffect(() => {
-    if (!selectedSpacecraftRef.current?.model || !cameraRef.current) return;
+    if (!selectedSpacecraftRef.current?.model || !cameraRef.current || !thridPersonCameraActive) return;
     thirdPersonRef.current = new FirstPersonCamera({
       camera: cameraRef.current,
-      target: selectedSpacecraftRef.current.model, 
+      target: selectedSpacecraftRef.current.model,
+      shipBody: selectedSpacecraftRef.current.body, 
     });
     setThirdPersonCameraReady(true);
     console.log("ThirdPersonCamera initialized!");
-  }, [selectedSpacecraftRef.current?.model]);
-  
+  }, [selectedSpacecraftRef.current?.model, thridPersonCameraActive]);
 
   // Animation loop (depends on sceneReady)
   useEffect(() => {
-    if (!sceneReady || !selectedSpacecraftRef.current) return;
-    console.log("sceneReady", sceneReady, "Animating");
+    if (!sceneReady || !selectedSpacecraftRef.current || !cameraRef.current) return;
 
     const scene = sceneRef.current;
     const camera = cameraRef.current;
@@ -155,43 +171,67 @@ export default function SpaceRenderer({
     let time = Date.now();
 
     let animationFrameId;
-    let lastUpdateTime = 0;
+    let lastUpdateTime = time;
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    setThridPersonCameraActive(true);
+
+    const handleKeyDownWithOrbitalControl = (e) => {
+       handleKeyDown(e);
+       // Handle 'o' key press to activate orbital control selection
+       if (e.code === 'KeyO') {
+         if (orbitalControlActive) {
+           setOrbitalControlActive(false);
+           OrbitalTargetBody.current = null;
+         } else {
+           setShowOrbitalSelector(true);
+         }
+       }
+       if (e.code === 'KeyT') {
+          setThridPersonCameraActive(true);
+       }
+    };
+
+    // Handle resize
+    function onResize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      renderer.setSize(w, h);
+      composer.setSize(w, h);
+    }
 
     // Focus the window to ensure key events work
     window.focus();
     
-    // console.log("Starting audio loading...");
-    // audioLoaderRef.current.load('/sounds/mixkit-horror-sci-fi-wind-tunnel-894.wav', (buffer) => {
-    //   soundRef.current.setBuffer(buffer);
-    //   soundRef.current.setLoop(true);
-    //   soundRef.current.setVolume(1);
-    //   soundRef.current.play();
-    // });
-    // console.log("audio loaded!!");
+    console.log("Starting audio loading...");
+    audioLoaderRef.current.load('/sounds/15 S.T.A.Y.wav', (buffer) => {
+      soundRef.current.setBuffer(buffer);
+      soundRef.current.setLoop(true);
+      soundRef.current.setVolume(1);
+      soundRef.current.play();
+    });
+    console.log("audio loaded!!");
 
-    // if(camera.add(soundRef.current)){
-    //   console.log("Sound added to camera");
-    // };
+    if(camera.add(soundRef.current)){
+      console.log("Sound added to camera");
+    };
 
     var tick = 0;
     const animate = () => {
       tick++;
-      // console.log(`Tick: ${tick}`);
+      const currentTime = performance.now();
+      const realDelta = (currentTime - time) / 1000; // seconds in real world
+      const scaledDelta = realDelta * timeScale;     // accelerated sim time
+      time = currentTime;
 
-      if (!isPaused && thirdPersonCameraReady) {
-        // Update game time
-        const currentTime = Date.now();
-        const deltaTime = ((currentTime - time) / 1000) * timeScale;
-        setGameTime(prev => prev + deltaTime);
-        time = currentTime;
+      setGameTime(prev => prev + scaledDelta);
+
+      if (!isPaused) {  
+        lastUpdateTime = currentTime;
 
         // Update Physics
         if (worldRef.current) {
           cannonDebuggerRef.current.update();
-          worldRef.current.step(1 / 60, deltaTime, 3);
+          worldRef.current.step(1/60, scaledDelta, 3);
           
           // Sync Three.js models with Cannon.js bodies
           if (spacecraftsRef.current) {
@@ -205,10 +245,10 @@ export default function SpaceRenderer({
         }
 
         // Update celestial body positions (orbital & Gravity mechanics)
-        // applyOrbitalForces(celestialBodiesRef);
+        applyOrbitalForces(celestialBodiesRef);
 
         // Handle Spacecraft's physics
-        if (selectedSpacecraftRef.current && onSpacecraftUpdate && thirdPersonRef.current) {
+        if (selectedSpacecraftRef.current && onSpacecraftUpdate) {
           const shipBody = selectedSpacecraftRef.current.body;
           const ship = selectedSpacecraftRef.current.model;
           const shipData = selectedSpacecraftRef.current.data;
@@ -216,86 +256,264 @@ export default function SpaceRenderer({
           // Thrust and orientation application
           if (!ship || !shipData || !shipBody) return;
 
-          // Apply orientation
-          const rotationSpeed = 0.25;
-          const { deltaPitch, deltaYaw, deltaRoll } = getRotationDeltaFromKeys(rotationSpeed);
-          const qDelta = new CANNON.Quaternion();
-          qDelta.setFromEuler(deltaPitch * rotationSpeed, deltaYaw * rotationSpeed, deltaRoll * rotationSpeed, "XYZ");
+          // Sync Cannon body to ship data
+          shipData.position.copy(scaler.reScaleVector(shipBody.position));
+          shipData.orientation.copy(shipBody.quaternion);
 
-          // Apply to shipBody quaternion
-          shipBody.quaternion = shipBody.quaternion.mult(qDelta);
-          // console.log(` ShipBody's quaternion: ${shipBody.quaternion.toArray()}`);
-
-          // Apply thrust to Cannon.js body
-          const thrustPower = 1000000;
-          const thrustDir = getThrustVectorFromKeys(shipBody.quaternion);
-          if (thrustDir.lengthSquared() > 0) {
-            const thrustVector = thrustDir.scale(thrustPower);
-            applyForceToBody(shipBody, thrustVector);
+          /* ROTATION */
+          // Keep track of angular velocity (persistent across frames)
+          if (!shipBody.angularVelocity) {
+            shipBody.angularVelocity = { pitch: 0, yaw: 0, roll: 0 };
           }
 
+          // Get input deltas from keys (these act as acceleration)
+          const { deltaPitch, deltaYaw, deltaRoll } = getRotationDeltaFromKeys(0.0005); // tweak small for smooth acceleration
+
+          // Update angular velocity
+          shipBody.angularVelocity.pitch += deltaPitch;
+          shipBody.angularVelocity.yaw   += deltaYaw;
+          shipBody.angularVelocity.roll  += deltaRoll;
+
+          // Optionally clamp angular velocity to avoid crazy spinning
+          const maxSpeed = 0.05;
+          shipBody.angularVelocity.pitch = Math.max(-maxSpeed, Math.min(maxSpeed, shipBody.angularVelocity.pitch));
+          shipBody.angularVelocity.yaw   = Math.max(-maxSpeed, Math.min(maxSpeed, shipBody.angularVelocity.yaw));
+          shipBody.angularVelocity.roll  = Math.max(-maxSpeed, Math.min(maxSpeed, shipBody.angularVelocity.roll));
+          
+          // Ensure all values are finite to prevent audio listener errors
+          if (!isFinite(shipBody.angularVelocity.pitch)) shipBody.angularVelocity.pitch = 0;
+          if (!isFinite(shipBody.angularVelocity.yaw)) shipBody.angularVelocity.yaw = 0;
+          if (!isFinite(shipBody.angularVelocity.roll)) shipBody.angularVelocity.roll = 0;
+
+          // Apply rotation based on angular velocity
+          const qDelta = new CANNON.Quaternion();
+          qDelta.setFromEuler(
+            shipBody.angularVelocity.pitch,
+            shipBody.angularVelocity.yaw,
+            shipBody.angularVelocity.roll,
+            "XYZ"
+          );
+
+          shipBody.quaternion = shipBody.quaternion.mult(qDelta);
+
+          // Apply thrust to Cannon.js body
+          // const thrustPower = (shipData.mass * 9.8 * shipData.twr) * (scaler.SCALE_X ** 2) / AU_TO_METERS;
+
+          /* THRUST */
+          // Calculate thrust power
+          const mainTWR = shipData.twr || 2.0; // Main engine TWR
+          const rcsTWR = 0.05; // RCS is much weaker (0.5g)
+
+          // Get separated thrust forces
+          const { mainThrust, rcsThrust } = getThrustFromKeys(
+            shipBody.quaternion,
+            shipData.mass,
+            mainTWR,
+            rcsTWR
+          );
+
+          // Convert to SCALED coordinates
+          const scaledMainThrust = new CANNON.Vec3(
+            mainThrust.x * (scaler.SCALE_X ** 2) / AU_TO_METERS,
+            mainThrust.y * (scaler.SCALE_X ** 2) / AU_TO_METERS,
+            mainThrust.z * (scaler.SCALE_X ** 2) / AU_TO_METERS
+          );
+
+          const scaledRcsThrust = new CANNON.Vec3(
+            rcsThrust.x * (scaler.SCALE_X ** 2) / AU_TO_METERS,
+            rcsThrust.y * (scaler.SCALE_X ** 2) / AU_TO_METERS,
+            rcsThrust.z * (scaler.SCALE_X ** 2) / AU_TO_METERS
+          );
+
+          // Apply main engine thrust
+          let totalForce = new CANNON.Vec3(0, 0, 0);
+          let totalThrustVector = new CANNON.Vec3(0, 0, 0);
+          if (mainThrust.lengthSquared() > 0) {
+            totalThrustVector.vadd(scaledMainThrust, totalThrustVector);
+            totalForce.vadd(scaledMainThrust, totalForce);
+            applyForceToBody(shipBody, scaledMainThrust);
+          }
+
+          // Apply RCS thrust
+          if (rcsThrust.lengthSquared() > 0) {
+            totalThrustVector.vadd(scaledRcsThrust, totalThrustVector);
+            totalForce.vadd(scaledRcsThrust, totalForce);
+            applyForceToBody(shipBody, scaledRcsThrust);
+          }
+
+          /* LANDING */
+          // Landing system integration
+          if (landingSystemRef.current) {
+            const landingInfo = landingSystemRef.current.update(
+              shipBody,
+              shipData.position,
+              celestialBodiesRef,
+              scaler,
+              scaledDelta
+            );
+            
+            setLandingData(landingInfo);
+
+            // Auto-apply retro thrust during descent if autopilot engaged
+            if (landingInfo.phase === LANDING_PHASES.DESCENT || 
+                landingInfo.phase === LANDING_PHASES.FINAL_APPROACH) {
+              
+              // Calculate upward thrust vector to counteract gravity
+              if (landingInfo.altitude < 5000 && landingInfo.verticalSpeed > 10) {
+                const retroThrust = landingInfo.recommendedThrust;
+                
+                // Apply upward force
+                const upVector = new CANNON.Vec3(0, 0, -1);
+                const retroForce = upVector.scale(mainThrust * retroThrust);
+                applyForceToBody(shipBody, retroForce);
+                
+                console.log(`🔥 Retro-thrust: ${(retroThrust * 100).toFixed(0)}%`);
+              }
+            }
+
+            // Stop spacecraft when landed
+            if (landingInfo.phase === LANDING_PHASES.LANDED) {
+              shipBody.velocity.set(0, 0, 0);
+              shipBody.angularVelocity.set(0, 0, 0);
+            }
+          }
+
+          /* GRAVITY */
           // Apply gravitational forces from celestial bodies to Cannon.js body
           for (const bodyName in celestialBodiesRef.current) {
             const body = celestialBodiesRef.current[bodyName];
-            if (shipBody && shipData && body.bodyData) {
-              // console.log(`Applying gravity pull to ${shipData.name} from ${bodyName}`);
-              // console.log(`Ship mass: ${shipData.mass} kg`);
-              // console.log( `${bodyName} mass: ${body.bodyData.mass} kg`);
-
-              const force = gravitationalForce( 
-                shipData.position, // Spacecraft position
-                shipData.mass, // Spacecraft mass
-                body.bodyData.position, // Celestial body position
-                body.bodyData.mass // Celestial body mass
+            if (shipBody && shipData && body.data) {
+              const force = gravitationalForce(
+                shipData.position,
+                shipData.mass,
+                body.data.position,
+                body.data.mass
               );
-              // console.log("Gravitational force:", force);
               
               const cannonForce = new CANNON.Vec3(force.x, force.y, force.z);
+              totalForce.vadd(cannonForce, totalForce); // ✓ Accumulate forces
               applyForceToBody(shipBody, cannonForce);
             }
           }
 
-          // Sync Three.js model to Cannon body
+          // Calculate total acceleration (after all forces applied)
+          const cannonAcceleration = totalForce.scale(1 / shipData.mass);
+
+          // Sync Cannon body to Three.js model
           ship.position.copy(shipBody.position);
           ship.quaternion.copy(shipBody.quaternion);
 
-          // Sync data to body
-          shipData.position.copy(scaler.reScaleVector(shipBody.position));
-          shipData.orientation.copy(shipBody.quaternion);
-          shipData.velocity.copy(shipBody.velocity);
+          const AccSim = new THREE.Vector3(
+            cannonAcceleration.x,
+            cannonAcceleration.y,
+            cannonAcceleration.z
+          );
+
+          const velSim = new THREE.Vector3(
+            shipBody.velocity.x,
+            shipBody.velocity.y,
+            shipBody.velocity.z
+          );
+
+          // Convert to meters/second² and meters/second
+          shipData.acceleration.copy(AccSim.multiplyScalar(AU_TO_METERS / (scaler.SCALE_X ** 2)));
+          shipData.velocity.copy(velSim.multiplyScalar(AU_TO_METERS / (scaler.SCALE_X ** 2)));
+          shipData.thrust_vector.copy(totalThrustVector);
 
           let updatedShipData = updatePosition(shipData);
           updatedShipData = updateOrientation(updatedShipData);
           updatedShipData = updateVelocity(updatedShipData);
-          updatedShipData = updateSystems(updatedShipData, deltaTime);
+          updatedShipData = updateSystems(updatedShipData, scaledDelta);
 
           selectedSpacecraftRef.current.data = updatedShipData;
           selectedSpacecraftRef.current.body = shipBody;
           selectedSpacecraftRef.current.model = ship;
         }
 
-        // Camera Update
-        thirdPersonRef.current.Update(timeScale);
+        /* Atmosphere Update */
+        if (celestialBodiesRef.current['sun']) {
+          const sunPosition = celestialBodiesRef.current['sun'].bodyMesh.position.clone();
+          
+          updateAllAtmospheres(
+            atmosphereRefs,
+            cloudsRefs,
+            camera,
+            sunPosition,
+            landingData,
+            scaledDelta
+          );
+        }
+
+        if (landingData && landingData.altitude < 100000) {
+          // Fade starfield/background based on altitude
+          const fadeFactor = Math.min(1.0, landingData.altitude / 100000);
+          
+          // If you have a starfield, fade it out
+          if (scene.background && scene.background.isTexture) {
+            // Can't directly fade cube texture, but you could use fog
+            scene.fog = new THREE.FogExp2(0x87CEEB, (1 - fadeFactor) * 0.00001);
+          }
+        } else {
+          scene.fog = null; // Clear fog in space
+        }
+
+        // Camera Update - only if orbital control is not active
+        if (!orbitalControlActive && thirdPersonRef.current) {
+          thirdPersonRef.current.Update(scaledDelta);
+
+          // Define current and target camera offsets (persistent)
+          if (!thirdPersonRef.current.currentOffset)
+            thirdPersonRef.current.currentOffset = new THREE.Vector3(0.5e-8, 2e-8, 7.5e-8); // default chase view
+          if (!thirdPersonRef.current.targetOffset)
+            thirdPersonRef.current.targetOffset = new THREE.Vector3(0.5e-8, 2e-8, 7.5e-8);
+
+          // Handle camera mode keys
+          if (keysPressed.has('KeyC')) {
+            thirdPersonRef.current.targetOffset.set(0, 0, -2.5e-8); // cockpit
+            thirdPersonRef.current.lookOffset.set(0, 0, -1); // cockpit
+          } else if (keysPressed.has('BracketRight')) {
+            thirdPersonRef.current.targetOffset.set(5e-8, 0, 0); // right side
+            thirdPersonRef.current.lookOffset.set(0, 0, 0);
+          } else if (keysPressed.has('BracketLeft')) {
+            thirdPersonRef.current.targetOffset.set(-5e-8, 0, 0); // left side
+            thirdPersonRef.current.lookOffset.set(0, 0, 0);
+          } else if (keysPressed.has('Equal')) {
+            thirdPersonRef.current.targetOffset.set(0, 1e-8, -7e-8); // front view
+            thirdPersonRef.current.lookOffset.set(0, 0, 0); // front view
+          } else if (keysPressed.has('KeyV')) {
+            thirdPersonRef.current.targetOffset.set(0.5e-8, 2e-8, 7.5e-8); // reset to default chase view
+            thirdPersonRef.current.lookOffset.set(0, 0, -1e-8);
+          }
+
+          // Smooth interpolation toward target (cool transition)
+          thirdPersonRef.current.currentOffset.lerp(thirdPersonRef.current.targetOffset, 0.5);
+
+          // Apply result
+          thirdPersonRef.current.offset.copy(thirdPersonRef.current.currentOffset);
+        }
+ 
+        if (orbitalControlActive && OrbitalTargetBody.current) {
+          controlsRef.current.setTargetAndRange(OrbitalTargetBody.current, { bodyRadius: OrbitalTargetBody.current.data.radius || 0 });
+          controlsRef.current.update();
+        }
 
         // onSpacecraftUpdate;
         onSpacecraftUpdate(selectedSpacecraftRef.current.data);
-        controlsRef.current.target.copy(selectedSpacecraftRef.current.model.position);
+
+        setTimeout(() => {
+          const { testAtmosphereInScene } = require('../../utils/atmosphereDebug');
+          testAtmosphereInScene(sceneRef.current);
+        }, 10000);
 
         // Update renderer and camera
-        controlsRef.current.update();
         camera.aspect = window.innerWidth / window.innerHeight
         camera.updateProjectionMatrix();
 
-        // Handle resize
-        function onResize() {
-          const w = window.innerWidth;
-          const h = window.innerHeight;
-          renderer.setSize(w, h);
-          composer.setSize(w, h);
-        }
-        window.addEventListener('resize', onResize);
-
         composer.render();
+
+        window.addEventListener('keydown', handleKeyDownWithOrbitalControl);
+        window.addEventListener('keyup', handleKeyUp);
+        window.addEventListener('resize', onResize);
       };
 
       animationFrameId = requestAnimationFrame(animate);
@@ -303,16 +521,18 @@ export default function SpaceRenderer({
 
     animate();
 
+    // cleanup
     return () => {
       cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('keydown', handleKeyDownWithOrbitalControl);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('resize', onResize);
       renderer.dispose();
       if (renderer.domElement && mountRef.current?.contains(renderer.domElement)) {
         mountRef.current.removeChild(renderer.domElement);
       }
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [sceneReady, timeScale]);
+  }, [sceneReady]);
 
   return (
     <div>
@@ -346,6 +566,64 @@ export default function SpaceRenderer({
           </div>
         </div>
        </div>
+      {/* Add Landing HUD */}
+      <LandingHUD 
+        landingData={landingData}
+      />
+      <OrbitalTargetSelector
+         isOpen={showOrbitalSelector}
+         onSelectBody={(bodyId) => {
+           setShowOrbitalSelector(false);
+           
+           // Check if this is a spacecraft target
+             if (bodyId.startsWith('spacecraft-')) {
+               const spacecraftName = bodyId.replace('spacecraft-', '');
+               
+               // Access spacecraft from the spacecraftsRef
+               if (spacecraftsRef.current) {
+                 // Find the spacecraft model in the scene
+                 const spacecraft = spacecraftsRef.current.get(spacecraftName);
+                 
+                 if (spacecraft && spacecraft.model && controlsRef.current && cameraRef.current) {
+                  // Disable third-person camera and activate orbital control
+                  setThridPersonCameraActive(false);
+                  thirdPersonRef.current = null;
+                   
+                  // Set orbital control target to the spacecraft
+                  OrbitalTargetBody.current = spacecraft.model;
+                  controlsRef.current.setTargetAndRange(spacecraft.model, { bodyRadius: scaler.scaleValue(spacecraft.data.radius) || 0 });
+                  setOrbitalControlActive(true);
+                   
+                  console.log(`Orbital control set to spacecraft: ${spacecraftName}`);
+                 } else {
+                   console.warn(`Could not set orbital control to spacecraft: ${spacecraftName}`);
+                 }
+               } else {
+                 console.warn(`Spacecraft reference not available`);
+               }
+           } 
+           // Otherwise it's a celestial body
+           else if (controlsRef.current && celestialBodiesRef.current && celestialBodiesRef.current[bodyId] && 
+            cameraRef.current && celestialBodiesRef.current[bodyId].bodyMesh && 
+            celestialBodiesRef.current[bodyId].bodyMesh.position) {
+             
+            // Disable third-person camera and activate orbital control
+            setThridPersonCameraActive(false);
+            thirdPersonRef.current = null;
+             
+            const targetBody = celestialBodiesRef.current[bodyId];
+            OrbitalTargetBody.current = targetBody.bodyMesh;
+            controlsRef.current.setTargetAndRange(OrbitalTargetBody.current, { bodyRadius: scaler.scaleValue(targetBody.data.radius) || 0 });
+            setOrbitalControlActive(true);
+
+            console.log(`Orbital control set to celestial body: ${bodyId}`);
+           } else {
+             console.warn(`Could not set orbital control to target: ${bodyId}`);
+           }
+         }}
+
+         onClose={() => setShowOrbitalSelector(false)}
+       />
     </div>  
   )
 }
