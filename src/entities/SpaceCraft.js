@@ -4,8 +4,8 @@ import spacecraftSchema from './SpaceCraft.json';
 import { AU_TO_METERS, G_SCALED } from '../utils/physicsUtils';
 
 const r = 4.530e-5 * 3; 
-const theta = 45 * Math.PI / 180; // rotation in XY plane
-const phi = 10 * Math.PI / 180;   // tilt from XY plane
+const theta = 40 * Math.PI / 180; // rotation in XY plane
+const phi = 5 * Math.PI / 180;   // tilt from XY plane
 
 const x = 1 - (r * Math.cos(phi) * Math.cos(theta));
 const y = r * Math.sin(phi);

@@ -21,8 +21,8 @@ export function setupOrbitControls(camera, rendererDomElement) {
   controls.screenSpacePanning = false;
 
   // Default ranges (will be overridden per-target)
-  controls.minDistance = 1e-8;
-  controls.maxDistance = 1e8;
+  controls.minDistance = 1e-10;
+  controls.maxDistance = 1e-3;
 
   // Allow mouse buttons to behave normally
   // (This makes middle-wheel do dolly, right do pan)

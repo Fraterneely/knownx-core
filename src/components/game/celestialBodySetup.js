@@ -114,7 +114,6 @@ export function setupCelestialBodies(world, renderer, scene, camera, celestialBo
           normalScale: new THREE.Vector2(10, 10), // Enhance terrain detail
           specularMap: specularMap,     // Shiny oceans
           specular: new THREE.Color(0x333333), // Ocean reflection color
-          shininess: 50,                // Ocean shininess       // City lights
           emissive: body.color,
           emissiveIntensity: body.type === 'star' ? (body.emissiveIntensity || 10) : 0.005,
         });
@@ -169,8 +168,8 @@ export function setupCelestialBodies(world, renderer, scene, camera, celestialBo
 
       const flareSprite = new THREE.Sprite(flareMaterial);
       flareSprite.scale.set(
-        scaler.scaleValue(body.radius * 50), 
-        scaler.scaleValue(body.radius * 50), 
+        scaler.scaleValue(body.radius * 60), 
+        scaler.scaleValue(body.radius * 60), 
         1
       );
 

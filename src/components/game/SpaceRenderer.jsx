@@ -86,7 +86,7 @@ export default function SpaceRenderer({
     const landingSystem = new LandingSystem(scene, camera, composer);
 
     setupLighting(scene, activeLights, setLightsReady); 
-    setupStarfield(scene);
+    setupStarfield(scene, textureLoader);
     setupCelestialBodies(world, renderer, scene, camera, celestialBodiesMaterail, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress);
     loadAllSpacecraftModels(world, scene, spacecraftsMaterial, spacecraftList, spacecraftsRef, selectedSpacecraftRef, setLoadingProgress);
 
@@ -228,9 +228,12 @@ export default function SpaceRenderer({
       if (!isPaused) {  
         lastUpdateTime = currentTime;
 
+        const stars = scene.getObjectByName("starfield");
+        if (stars && stars.tick) stars.tick(scaledDelta);  
+
         // Update Physics
         if (worldRef.current) {
-          cannonDebuggerRef.current.update();
+          // cannonDebuggerRef.current.update();
           worldRef.current.step(1/60, scaledDelta, 3);
           
           // Sync Three.js models with Cannon.js bodies

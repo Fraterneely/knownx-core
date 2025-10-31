@@ -95,14 +95,15 @@ export function AtmosphereShaderMaterial(planetRadius, atmosphereRadius, atmosph
       atmosphereRadius: { value: atmosphereRadius },
       sunPosition: { value: sunPosition.normalize() },
       cameraPos: { value: new THREE.Vector3() },
-      atmosphereColor: { value: atmosphereColor }, // Sky blue
+      atmosphereColor: { value: new THREE.Color(0.5, 0.7, 1.0) }, // Sky blue
       sunsetColor: { value: new THREE.Color(1.0, 0.6, 0.3) }, // Orange
-    }, 
+    },
     
     vertexShader: `
       varying vec3 vNormal;
       varying vec3 vPosition;
       varying vec3 vWorldPosition;
+      varying vec3 vViewDirection;
       
       void main() {
         vNormal = normalize(normalMatrix * normal);
@@ -110,6 +111,9 @@ export function AtmosphereShaderMaterial(planetRadius, atmosphereRadius, atmosph
         
         vec4 worldPos = modelMatrix * vec4(position, 1.0);
         vWorldPosition = worldPos.xyz;
+        
+        // View direction from camera to this point
+        vViewDirection = normalize(worldPos.xyz - cameraPosition);
         
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
@@ -126,39 +130,55 @@ export function AtmosphereShaderMaterial(planetRadius, atmosphereRadius, atmosph
       varying vec3 vNormal;
       varying vec3 vPosition;
       varying vec3 vWorldPosition;
+      varying vec3 vViewDirection;
       
       void main() {
-        // Direction from center to this point
+        // Direction from planet center to this atmosphere point
         vec3 normal = normalize(vPosition);
         
-        // View direction
-        vec3 viewDir = normalize(cameraPos - vWorldPosition);
+        // Direction from camera to this point
+        vec3 viewDir = normalize(vViewDirection);
         
-        // Sun direction
+        // Sun direction (normalized)
         vec3 lightDir = normalize(sunPosition);
         
-        // Fresnel effect (atmosphere is stronger at edges)
-        float fresnel = 1.0 - abs(dot(viewDir, normal));
-        fresnel = pow(fresnel, 3.0);
+        // CRITICAL: Check if this point is facing the sun
+        float sunAlignment = dot(normal, lightDir);
         
-        // Sun intensity
-        float sunDot = max(dot(normal, lightDir), 0.0);
+        // Only show atmosphere on the sunlit side
+        if (sunAlignment < -0.2) {
+          // Point is on dark side, fade out atmosphere
+          discard; // Or set alpha to 0
+        }
         
-        // Sunset effect (when sun is low)
+        // Fresnel effect (atmosphere glow at edges when viewed from angle)
+        float fresnel = 1.0 - abs(dot(-viewDir, normal));
+        fresnel = pow(fresnel, 2.5);
+        
+        // Sun intensity on this point (0 = dark, 1 = full sun)
+        float sunDot = max(sunAlignment, 0.0);
+        
+        // Sunset effect (when sun is at horizon)
         float sunHeight = lightDir.y;
-        float sunsetAmount = smoothstep(0.2, -0.2, sunHeight);
+        float sunsetAmount = smoothstep(0.3, -0.1, sunHeight) * sunDot;
         
-        // Mix atmosphere color with sunset
-        vec3 finalColor = mix(atmosphereColor, sunsetColor, sunsetAmount * sunDot);
+        // Mix base atmosphere color with sunset color
+        vec3 baseColor = mix(atmosphereColor, sunsetColor, sunsetAmount);
         
-        // Sun glow
-        float sunGlow = pow(max(dot(viewDir, lightDir), 0.0), 8.0);
-        finalColor += vec3(1.0, 0.9, 0.7) * sunGlow * 0.5;
+        // Add sun glow when looking towards sun through atmosphere
+        float sunGlow = pow(max(dot(-viewDir, lightDir), 0.0), 16.0);
+        vec3 glowColor = vec3(1.0, 0.95, 0.8) * sunGlow * 0.8;
         
-        // Atmosphere density (thicker at horizon)
-        float density = fresnel * 0.8;
+        // Final color: base atmosphere + sun glow
+        vec3 finalColor = baseColor + glowColor;
         
-        gl_FragColor = vec4(finalColor, density);
+        // Atmosphere intensity: stronger at edges (fresnel) and on sunlit side
+        float intensity = fresnel * smoothstep(-0.2, 0.5, sunDot);
+        
+        // Final opacity
+        float alpha = intensity * 0.6;
+        
+        gl_FragColor = vec4(finalColor, alpha);
       }
     `,
     
