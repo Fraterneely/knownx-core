@@ -29,7 +29,7 @@ export function setupStarfield(scene, textureLoader) {
   starGeometry.setAttribute('size', new THREE.Float32BufferAttribute(starSizes, 1));
 
   // Load a flare-like circular gradient
-  const flareTexture = textureLoader.current.load('/textures/lensFlares/star.png');
+  const flareTexture = textureLoader.current.load('/textures/lensFlares/sun.png');
 
   const starMaterial = new THREE.PointsMaterial({
     map: flareTexture,
