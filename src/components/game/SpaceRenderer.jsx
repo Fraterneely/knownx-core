@@ -23,8 +23,11 @@ import { LandingSystem, LANDING_PHASES } from './LandingSystem';
 import LandingHUD from '../ui/LandingHUD';
 import OrbitalTargetSelector from '../ui/OrbitalTargetSelector';
 import { updateAllAtmospheres } from '../../utils/atmosphereHelper';
+import Stats from 'three/examples/jsm/libs/stats.module.js';
+import { setupKeyboardControls } from './keyboardControls';
 
 const scaler = new SpaceScaler();
+const stats = new Stats();
 
 export const useSpacecraftsRef = () => {
   const spacecraftsRef = useRef([]);
@@ -36,8 +39,10 @@ export default function SpaceRenderer({
   onSpacecraftUpdate,
   targetBody,
   isPaused,
+  setIsPaused,
   timeScale,
-  onLandingStatusChange
+  showHUD,
+  addLogEntry
 }) {
   const mountRef = useRef(null);
   const sceneRef = useRef();
@@ -77,6 +82,11 @@ export default function SpaceRenderer({
   const [thridPersonCameraActive, setThridPersonCameraActive] = useState(false);
   const OrbitalTargetBody = useRef(null);
   const audioPlayingRef = useRef(false);
+  const [cinematicTime, setCinematicTime] = useState(0);
+  const [cinematicActive, setCinematicActive] = useState(false);
+  const [cinematicFadeOut, setCinematicFadeOut] = useState(false);
+  const cinematicTimeoutRef = useRef(null);
+
 
   // Effect for initial scene setup (runs once mountRef is available)
   useEffect(() => {
@@ -90,6 +100,7 @@ export default function SpaceRenderer({
     setupStarfield(scene, textureLoader);
     setupCelestialBodies(world, renderer, scene, camera, celestialBodiesMaterail, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress);
     loadAllSpacecraftModels(world, scene, spacecraftsMaterial, spacecraftList, spacecraftsRef, selectedSpacecraftRef, setLoadingProgress);
+    setupKeyboardControls(setShowOrbitalSelector);
 
     sceneRef.current = scene;
     cameraRef.current = camera;
@@ -160,6 +171,55 @@ export default function SpaceRenderer({
     console.log("ThirdPersonCamera initialized!");
   }, [selectedSpacecraftRef.current?.model, thridPersonCameraActive]);
 
+  // Effect for handling Pause/Resume shortcut
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsPaused(prev => !prev);
+        addLogEntry('Time Control', { action: isPaused ? 'Resume' : 'Pause' });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isPaused, setIsPaused]);
+
+  // Cinematic Effect
+  useEffect(() => {
+    if (isPaused) {
+      // Start countdown to cinematic mode
+      cinematicTimeoutRef.current = setTimeout(() => {
+        setCinematicActive(true);
+        setCinematicFadeOut(false);
+        setOrbitalControlActive(true);
+        showHUD(false);
+        console.log("🎥 Cinematic orbit started");
+      }, 5000); // 15 seconds
+    } else {
+      // Unpaused — cancel cinematic and reset
+      if (cinematicActive) {
+        setCinematicFadeOut(true);
+      }
+      clearTimeout(cinematicTimeoutRef.current);
+      cinematicTimeoutRef.current = null;
+      setCinematicActive(false);
+      setOrbitalControlActive(false);
+    }
+  
+    return () => clearTimeout(cinematicTimeoutRef.current);
+  }, [isPaused]);
+  
+
+  useEffect(() => {
+    if (cinematicActive) {
+      setCinematicTime(0);
+    }
+  }, [cinematicActive]);
+
   // Animation loop (depends on sceneReady)
   useEffect(() => {
     if (!sceneReady || !selectedSpacecraftRef.current || !cameraRef.current) return;
@@ -169,6 +229,8 @@ export default function SpaceRenderer({
     const renderer = rendererRef.current;
     const composer = composerRef.current;
     const controls = controlsRef.current; 
+
+    document.body.appendChild(stats.dom);
   
     let animationFrameId;
     let lastUpdateTime = performance.now();
@@ -235,6 +297,7 @@ export default function SpaceRenderer({
   
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
+      stats.update();
   
       const currentTime = performance.now();
       
@@ -243,18 +306,54 @@ export default function SpaceRenderer({
       camera.updateProjectionMatrix();
   
       // Handle audio
-      updateAudioPlayback();
+      updateAudioPlayback();  
   
-      // ✅ When paused, render and return
+      // When Paused
       if (isPaused) {
-        if (orbitalControlActive && controls) {
-          controls.target.copy(selectedSpacecraftRef.current.model.position);
-          controls.update();
+        const ship = selectedSpacecraftRef.current?.model;
+
+        if (controls && ship) {
+          if (cinematicActive) {
+            controls.target.copy(ship.position);
+            
+            const realDelta = (currentTime - lastUpdateTime) / 1000;
+            setCinematicTime(prev => prev + realDelta);
+
+            // Easing logic
+            let easeFactor;
+            if (!cinematicFadeOut) {
+              // Fade in over 5 seconds
+              easeFactor = Math.min(1, cinematicTime / 5);
+            } else {
+              // Fade out over 2 seconds
+              easeFactor = Math.max(0, 1 - cinematicTime / 2);
+              if (easeFactor === 0) {
+                setCinematicActive(false);
+                setCinematicTime(0);
+                setCinematicFadeOut(false);
+              }
+            }
+
+            const orbitSpeed = 0.02 * easeFactor;
+            const radius = 7e-8 * easeFactor;
+            const time = performance.now() * 0.001;
+
+            const x = ship.position.x + Math.cos(time * orbitSpeed) * radius;
+            const z = ship.position.z + Math.sin(time * orbitSpeed) * radius;
+            const y = ship.position.y;
+
+            camera.position.set(x, y, z);
+            camera.lookAt(ship.position);
+
+            controls.update();
+          }
         }
-        
+
         composer.render();
         return;
       }
+
+      
   
       // Calculate delta only when not paused
       let realDelta = (currentTime - lastUpdateTime) / 1000;
@@ -262,9 +361,6 @@ export default function SpaceRenderer({
       
       const scaledDelta = realDelta * timeScale;
       setGameTime(prev => prev + scaledDelta);
-  
-      // ALL YOUR PHYSICS AND UPDATE CODE HERE
-      // (Keep exactly as you have it)
   
       const stars = scene.getObjectByName("starfield");
   
@@ -486,9 +582,9 @@ export default function SpaceRenderer({
         thirdPersonRef.current.offset.copy(thirdPersonRef.current.currentOffset);
       }
   
-      if (orbitalControlActive && OrbitalTargetBody.current) {
-        controlsRef.current.setTargetAndRange(OrbitalTargetBody.current, { bodyRadius: OrbitalTargetBody.current.data.radius || 0 });
-        controlsRef.current.update();
+      if (controls && orbitalControlActive && OrbitalTargetBody.current) {
+        controls.setTargetAndRange(OrbitalTargetBody.current, { bodyRadius: OrbitalTargetBody.current.data.radius || 0 });
+        controls.update();
       }
   
       onSpacecraftUpdate(selectedSpacecraftRef.current.data);

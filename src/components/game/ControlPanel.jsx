@@ -31,13 +31,13 @@ export default function ControlPanel({
   timeScale,
   setTimeScale,
   onTargetChange,
-
+  addLogEntry,
+  flightLog,
   setShowControls
 }) {
   const [thrustDirection, setThrustDirection] = useState({ x: 0, y: 0, z: 0 });
   const [thrustPower, setThrustPower] = useState(50);
   const [autopilotEnabled, setAutopilotEnabled] = useState(spacecraft?.autopilot || false);
-  const [flightLog, setFlightLog] = useState([]);
   const [showLog, setShowLog] = useState(false);
 
   // Initialize thrust direction from spacecraft
@@ -52,36 +52,6 @@ export default function ControlPanel({
       setAutopilotEnabled(spacecraft.autopilot);
     }
   }, [spacecraft]); // Only run when spacecraft changes, not on every render
-
-  // Effect for handling keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.code === 'Space') {
-        event.preventDefault(); // Prevent default spacebar action (e.g., scrolling)
-        setIsPaused(prev => !prev);
-        addLogEntry('Time Control', { action: isPaused ? 'Resume' : 'Pause' });
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isPaused, setIsPaused]); // Re-run effect if isPaused or setIsPaused changes
-
-  // Add to flight log
-  const addLogEntry = (action, details) => {
-    const timestamp = new Date().toISOString();
-    const newEntry = {
-      timestamp,
-      action,
-      details
-    };
-    setFlightLog(prev => [newEntry, ...prev].slice(0, 50)); // Keep last 50 entries
-  };
-
-
 
   const handleEmergencyStop = () => {
     const updatedSpacecraft = {
@@ -170,7 +140,7 @@ export default function ControlPanel({
               className="flex-1 flex items-center justify-center gap-2 hover:bg-blue-600/30"
             >
               {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-              {isPaused ? 'Play' : 'Pause'}
+              {isPaused ? 'Resume' : 'Pause'}
             </Button>
             <Button
               variant="outline"

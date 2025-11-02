@@ -23,6 +23,7 @@ export default function SpaceExplorer() {
   const [showControls, setShowControls] = useState(true);
   const [showHUD, setShowHUD] = useState(false);
   const [showNavigationMap, setShowNavigationMap] = useState(false);
+  const [flightLog, setFlightLog] = useState([]);
 
 
   useEffect(() => {
@@ -172,7 +173,16 @@ export default function SpaceExplorer() {
     }
   };
 
-  
+  // Add to flight log
+  const addLogEntry = (action, details) => {
+    const timestamp = new Date().toISOString();
+    const newEntry = {
+      timestamp,
+      action,
+      details
+    };
+    setFlightLog(prev => [newEntry, ...prev].slice(0, 50)); // Keep last 50 entries
+  };
 
   if (isLoading) {
     return (
@@ -212,27 +222,29 @@ export default function SpaceExplorer() {
         onSpacecraftUpdate={handleSpacecraftUpdate}
         targetBody={spacecraft.target_body}
         isPaused={isPaused || gameOverReason}
+        setIsPaused={setIsPaused}
         timeScale={timeScale}
+        showHUD={setShowHUD}
         setTimeScale={setTimeScale}
+        addLogEntry={addLogEntry}
         className="absolute inset-0 z-0"
       />
 
       {/* Game UI Overlay */}
+      {showHUD && (
       <div
         className="absolute inset-0 z-1 pointer-events-none"
       >
-        {showHUD && (
-          <SpacecraftHUD
-            spacecraft={spacecraft}
-            currentMission={currentMission}
-            gameTime={gameTime}
-          />
-        )}
+        <SpacecraftHUD
+          spacecraft={spacecraft}
+          currentMission={currentMission}
+          gameTime={gameTime}
+        />
 
         {/* Control Panel or Toggle Button */}
         {showControls && !gameOverReason ? ( // Hide controls if game over
           <div className="pointer-events-auto">
-            {showHUD && (<ControlPanel
+            <ControlPanel
               spacecraft={spacecraft}
               onSpacecraftUpdate={handleSpacecraftUpdate}
               isPaused={isPaused}
@@ -242,7 +254,9 @@ export default function SpaceExplorer() {
               onTargetChange={handleTargetChange}
               onThrustApply={handleThrustApply}
               setShowControls={setShowControls} // Pass setter to allow ControlPanel to hide itself
-            />)}
+              addLogEntry={addLogEntry}
+              flightLog={flightLog}
+            />
           </div>
         ) : (
           !gameOverReason && ( // Only show toggle button if not game over
@@ -269,7 +283,7 @@ export default function SpaceExplorer() {
         </div>
 
         {/* Navigation Map */}
-        {showHUD && showNavigationMap && (
+        {showNavigationMap && (
           <div className={`fixed inset-0 z-40 flex items-center justify-center transition-opacity duration-300 ${showNavigationMap ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             <div className="absolute inset-0 bg-black bg-opacity-50 backdrop-filter backdrop-blur-md"></div>
             <div className="relative z-50 w-full h-full p-4">
@@ -279,7 +293,7 @@ export default function SpaceExplorer() {
         )}
 
         {/* Toggle Navigation Map Button */}
-        {showHUD && <div className="absolute bottom-4 right-4 z-10 pointer-events-auto">
+        {<div className="absolute bottom-4 right-4 z-10 pointer-events-auto">
           <Button
             variant="outline"
             size="icon"
@@ -291,6 +305,7 @@ export default function SpaceExplorer() {
         </div>}
 
       </div>
+      )}
     </div>
   );
 }
