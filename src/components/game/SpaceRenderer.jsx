@@ -100,7 +100,7 @@ export default function SpaceRenderer({
     setupStarfield(scene, textureLoader);
     setupCelestialBodies(world, renderer, scene, camera, celestialBodiesMaterail, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress);
     loadAllSpacecraftModels(world, scene, spacecraftsMaterial, spacecraftList, spacecraftsRef, selectedSpacecraftRef, setLoadingProgress);
-    setupKeyboardControls(setShowOrbitalSelector);
+    // setupKeyboardControls(setShowOrbitalSelector);
 
     sceneRef.current = scene;
     cameraRef.current = camera;
@@ -149,9 +149,8 @@ export default function SpaceRenderer({
     if (allAssetsLoaded && selectedSpacecraftRef.current?.model) {
       setSceneReady(true);
       // when sceneReady
-      const { controls, setTargetAndRange } = setupOrbitControls(cameraRef.current, rendererRef.current.domElement);
+      const controls = setupOrbitControls(cameraRef.current, rendererRef.current.domElement);
       controlsRef.current = controls;
-      controlsRef.current.setTargetAndRange = setTargetAndRange; // attach helper for convenience
 
     } else {
       setSceneReady(false);
@@ -239,18 +238,21 @@ export default function SpaceRenderer({
     window.focus();
   
     // ✅ Define handlers ONCE
-    const handleKeyDownInRender = (e) => {
+    const handleKeyDownInRender = async (e) => {
       handleKeyDown(e);
       if (e.code === 'KeyO') {
         if (orbitalControlActive) {
           setOrbitalControlActive(false);
           OrbitalTargetBody.current = null;
+          setShowOrbitalSelector(true);
         } else {
           setShowOrbitalSelector(true);
         }
       }
       if (e.code === 'KeyT') {
-        setThridPersonCameraActive(true);
+        await setThridPersonCameraActive(true);
+        setOrbitalControlActive(false);
+        OrbitalTargetBody.current = null;
       }
     };
   
@@ -581,9 +583,17 @@ export default function SpaceRenderer({
         thirdPersonRef.current.currentOffset.lerp(thirdPersonRef.current.targetOffset, 0.5);
         thirdPersonRef.current.offset.copy(thirdPersonRef.current.currentOffset);
       }
-  
+
       if (controls && orbitalControlActive && OrbitalTargetBody.current) {
-        controls.setTargetAndRange(OrbitalTargetBody.current, { bodyRadius: OrbitalTargetBody.current.data.radius || 0 });
+        const targetBody = OrbitalTargetBody.current;
+        
+        // ✅ Handle both spacecraft and celestial bodies
+        const targetPosition = targetBody.model 
+          ? targetBody.model.position      // Spacecraft
+          : targetBody.bodyMesh.position;  // Celestial body
+        
+      
+        controls.target.copy(targetPosition);
         controls.update();
       }
   
@@ -653,54 +663,60 @@ export default function SpaceRenderer({
       <OrbitalTargetSelector
          isOpen={showOrbitalSelector}
          onSelectBody={(bodyId) => {
-           setShowOrbitalSelector(false);
-           
-           // Check if this is a spacecraft target
-             if (bodyId.startsWith('spacecraft-')) {
-               const spacecraftName = bodyId.replace('spacecraft-', '');
-               
-               // Access spacecraft from the spacecraftsRef
-               if (spacecraftsRef.current) {
-                 // Find the spacecraft model in the scene
-                 const spacecraft = spacecraftsRef.current.get(spacecraftName);
-                 
-                 if (spacecraft && spacecraft.model && controlsRef.current && cameraRef.current) {
-                  // Disable third-person camera and activate orbital control
-                  setThridPersonCameraActive(false);
-                  thirdPersonRef.current = null;
-                   
-                  // Set orbital control target to the spacecraft
-                  OrbitalTargetBody.current = spacecraft.model;
-                  controlsRef.current.setTargetAndRange(spacecraft.model, { bodyRadius: scaler.scaleValue(spacecraft.data.radius) || 0 });
-                  setOrbitalControlActive(true);
-                   
-                  console.log(`Orbital control set to spacecraft: ${spacecraftName}`);
-                 } else {
-                   console.warn(`Could not set orbital control to spacecraft: ${spacecraftName}`);
-                 }
-               } else {
-                 console.warn(`Spacecraft reference not available`);
-               }
-           } 
-           // Otherwise it's a celestial body
-           else if (controlsRef.current && celestialBodiesRef.current && celestialBodiesRef.current[bodyId] && 
-            cameraRef.current && celestialBodiesRef.current[bodyId].bodyMesh && 
-            celestialBodiesRef.current[bodyId].bodyMesh.position) {
-             
-            // Disable third-person camera and activate orbital control
+          setShowOrbitalSelector(false);
+          
+          if (bodyId.startsWith('spacecraft-')) {
+            const spacecraftName = bodyId.replace('spacecraft-', '');
+            
+            if (spacecraftsRef.current) {
+              const spacecraft = spacecraftsRef.current.get(spacecraftName);
+              
+              if (spacecraft && spacecraft.model && controlsRef.current && cameraRef.current) {
+                setThridPersonCameraActive(false);
+                thirdPersonRef.current = null;
+                
+                OrbitalTargetBody.current = spacecraft;
+                
+                // ✅ Set initial camera position ONCE
+                const bodyRadius = scaler.scaleValue(spacecraft.data.size.x);
+                const orbitRadius = bodyRadius * 5;
+                
+                cameraRef.current.position.set(
+                  spacecraft.model.position.x + orbitRadius,
+                  spacecraft.model.position.y + orbitRadius * 0.5,
+                  spacecraft.model.position.z + orbitRadius
+                );
+                
+                controlsRef.current.target.copy(spacecraft.model.position);
+                setOrbitalControlActive(true);
+                
+                console.log(`Orbital control set to spacecraft: ${spacecraftName}`);
+              }
+            }
+          } 
+          else if (controlsRef.current && celestialBodiesRef.current && celestialBodiesRef.current[bodyId]) {
             setThridPersonCameraActive(false);
             thirdPersonRef.current = null;
-             
+            
             const targetBody = celestialBodiesRef.current[bodyId];
-            OrbitalTargetBody.current = targetBody.bodyMesh;
-            controlsRef.current.setTargetAndRange(OrbitalTargetBody.current, { bodyRadius: scaler.scaleValue(targetBody.data.radius) || 0 });
+            OrbitalTargetBody.current = targetBody;
+            
+            // ✅ Set initial camera position ONCE
+            const bodyRadius = scaler.scaleValue(targetBody.data.radius);
+            const orbitRadius = bodyRadius * 3;
+            
+            cameraRef.current.position.set(
+              targetBody.bodyMesh.position.x + orbitRadius,
+              targetBody.bodyMesh.position.y + orbitRadius * 0.5,
+              targetBody.bodyMesh.position.z + orbitRadius
+            );
+            
+            controlsRef.current.target.copy(targetBody.bodyMesh.position);
             setOrbitalControlActive(true);
-
+            
             console.log(`Orbital control set to celestial body: ${bodyId}`);
-           } else {
-             console.warn(`Could not set orbital control to target: ${bodyId}`);
-           }
-         }}
+          }
+        }}
 
          onClose={() => setShowOrbitalSelector(false)}
        />
