@@ -46,7 +46,7 @@ export function setupScene(mountRef) {
   const cameraSetup = new CameraSetup();
   const camera = cameraSetup.getCamera();
 
-  // Audio setup (optional)
+  // Audio setup
   const listener = new THREE.AudioListener();
   camera.add(listener);
 
@@ -92,5 +92,5 @@ export function setupScene(mountRef) {
   console.log('Max vertex uniforms:', renderer.capabilities.maxVertexUniforms);
   console.log('Max fragment uniforms:', renderer.capabilities.maxFragmentUniforms);
 
-  return { scene, camera, renderer, composer, audioLoader, sound };
+  return { scene, camera, renderer, composer, listener, audioLoader, sound };
 }

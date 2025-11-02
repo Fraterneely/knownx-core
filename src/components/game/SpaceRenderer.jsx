@@ -49,6 +49,7 @@ export default function SpaceRenderer({
   const cameraRef = useRef();
   const rendererRef = useRef();
   const composerRef = useRef();
+  const listenerRef = useRef();
   const audioLoaderRef = useRef();
   const soundRef = useRef();
   const controlsRef = useRef();
@@ -86,13 +87,20 @@ export default function SpaceRenderer({
   const [cinematicActive, setCinematicActive] = useState(false);
   const [cinematicFadeOut, setCinematicFadeOut] = useState(false);
   const cinematicTimeoutRef = useRef(null);
+  const [currentTrack, setCurrentTrack] = useState(null);
+  const [isEngineOn, setEngineOn] = useState(false);
+  const [travelMode, setTraveMode] = useState(false);
+  const soundTrackRef = useRef(null);
+  const ambientTrackRef = useRef(null);
+  const cinematicTrackRef = useRef(null);
+  const engineSoundRef = useRef(null);
 
 
   // Effect for initial scene setup (runs once mountRef is available)
   useEffect(() => {
     if (!mountRef.current) return;
 
-    const { scene, camera, renderer, composer, audioLoader, sound } = setupScene(mountRef);
+    const { scene, camera, renderer, composer, listener, audioLoader, sound } = setupScene(mountRef);
     const {world, cannonDebugger, celestialBodiesMaterail, spacecraftsMaterial } = initCannonWorld(scene);
     const landingSystem = new LandingSystem(scene, camera, composer);
 
@@ -110,6 +118,7 @@ export default function SpaceRenderer({
     celestialBodiesMaterailRef.current = celestialBodiesMaterail;
     spacecraftsMaterialRef.current = spacecraftsMaterial;
     cannonDebuggerRef.current = cannonDebugger;
+    listenerRef.current = listener;
     audioLoaderRef.current = audioLoader;
     soundRef.current = sound;
     landingSystemRef.current = landingSystem;
@@ -219,6 +228,99 @@ export default function SpaceRenderer({
     }
   }, [cinematicActive]);
 
+  // Load Audios
+  useEffect(() => {
+    const audioLoader = audioLoaderRef.current;
+    const listener = listenerRef.current;
+
+    audioLoader.load('/sounds/15 S.T.A.Y.wav', buffer => {
+      soundTrackRef.current = buffer;
+    });
+  
+    audioLoader.load('/sounds/spacecraft-engine-loop-01-58205.wav', buffer => {
+      engineSoundRef.current = buffer;
+    });
+  
+    audioLoader.load('/sounds/relaxing-cinematic-pads-303218.wav', buffer => {
+      cinematicTrackRef.current = buffer;
+    });
+  
+    audioLoader.load('/sounds/spaceship-ambient-sfx-164114.wav', buffer => {
+      ambientTrackRef.current = buffer;
+    });
+  
+    return () => {
+      cameraRef.current.remove(listener);
+    };
+  }, []); // Run once
+
+  // Handle Audios
+  useEffect(() => {
+    const sound = soundRef.current;
+  
+    const fadeVolume = (targetVolume, duration = 2, onComplete = null) => {
+      const initial = sound.getVolume();
+      const step = (targetVolume - initial) / (duration * 60);
+      let count = 0;
+  
+      const fade = () => {
+        count++;
+        sound.setVolume(initial + step * count);
+        if (count < duration * 60) {
+          requestAnimationFrame(fade);
+        } else if (onComplete) {
+          onComplete();
+        }
+      };
+      fade();
+    };
+  
+    const stopAll = (fadeOut = true) => {
+      if (sound.isPlaying) {
+        if (fadeOut) {
+          fadeVolume(0, 1.5, () => sound.stop());
+        } else {
+          sound.stop();
+        }
+      }
+    };
+  
+    const playTrack = (trackRef, volume = 0.6, loop = true) => {
+      if (!trackRef.current) return;
+      stopAll(true);
+      sound.setBuffer(trackRef.current);
+      sound.setLoop(loop);
+      sound.setVolume(0);
+      sound.play();
+      fadeVolume(volume, 2);
+    };
+  
+    // Logic choosing which track to play
+    if (isPaused && cinematicActive) {
+      playTrack(cinematicTrackRef, 0.7);
+      setCurrentTrack('cinematic');
+    } else if (travelMode) {
+      playTrack(ambientTrackRef, 0.4);
+      setCurrentTrack('ambient');
+    } else if (isEngineOn) {
+      playTrack(engineSoundRef, 0.5);
+      setCurrentTrack('engine');
+    } else {
+      playTrack(soundTrackRef, 0.6);
+      setCurrentTrack('soundtrack');
+    }
+  }, [isPaused, cinematicActive, travelMode, isEngineOn, keysPressed]);
+
+  // Track if engine is on
+  useEffect(() => {
+    // Whenever keysPressed changes, update engine state
+    if (keysPressed.has('KeyW')) {
+      setEngineOn(true);
+    } else {
+      setEngineOn(false);
+    }
+  }, [keysPressed]);
+  
   // Animation loop (depends on sceneReady)
   useEffect(() => {
     if (!sceneReady || !selectedSpacecraftRef.current || !cameraRef.current) return;
@@ -266,37 +368,6 @@ export default function SpaceRenderer({
       camera.updateProjectionMatrix();
     }
   
-    // ✅ Audio setup - only once per useEffect run
-    if (!audioPlayingRef.current && soundRef.current && !soundRef.current.buffer) {
-      console.log("Starting audio loading...");
-      audioLoaderRef.current.load('/sounds/15 S.T.A.Y.wav', (buffer) => {
-        soundRef.current.setBuffer(buffer);
-        soundRef.current.setLoop(true);
-        soundRef.current.setVolume(1);
-        if (!isPaused) {
-          soundRef.current.play();
-          audioPlayingRef.current = true;
-        }
-      });
-  
-      if(camera.add(soundRef.current)){
-        console.log("Sound added to camera");
-      }
-    }
-  
-    // ✅ Handle audio with current isPaused value
-    const updateAudioPlayback = () => {
-      if (!soundRef.current || !soundRef.current.buffer) return;
-      
-      if (isPaused && soundRef.current.isPlaying) {
-        soundRef.current.pause();
-        audioPlayingRef.current = false;
-      } else if (!isPaused && !soundRef.current.isPlaying) {
-        soundRef.current.play();
-        audioPlayingRef.current = true;
-      }
-    };
-  
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
       stats.update();
@@ -307,8 +378,6 @@ export default function SpaceRenderer({
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
   
-      // Handle audio
-      updateAudioPlayback();  
   
       // When Paused
       if (isPaused) {
@@ -337,14 +406,16 @@ export default function SpaceRenderer({
             }
 
             const orbitSpeed = 0.02 * easeFactor;
-            const radius = 7e-8 * easeFactor;
+            const radius = 8e-8 * easeFactor;
             const time = performance.now() * 0.001;
 
             const x = ship.position.x + Math.cos(time * orbitSpeed) * radius;
             const z = ship.position.z + Math.sin(time * orbitSpeed) * radius;
             const y = ship.position.y;
 
-            camera.position.set(x, y, z);
+            const smoothing = 1 - Math.pow(0.1, realDelta); // ~0.02 per 60fps frame
+            camera.position.lerp(new THREE.Vector3(x, y, z), smoothing);
+
             camera.lookAt(ship.position);
 
             controls.update();
