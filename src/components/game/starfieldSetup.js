@@ -33,7 +33,7 @@ export function setupStarfield(scene, textureLoader) {
 
   const starMaterial = new THREE.PointsMaterial({
     map: flareTexture,
-    size: 12, // try changing between 4 and 12 for more or less flare
+    size: 12,
     vertexColors: true,
     transparent: true,
     blending: THREE.AdditiveBlending,
@@ -43,6 +43,7 @@ export function setupStarfield(scene, textureLoader) {
 
   const stars = new THREE.Points(starGeometry, starMaterial);
   scene.add(stars);
+  stars.name = "starfield";
 
   // Animate stars (for twinkle)
   stars.tick = (delta) => {

@@ -87,6 +87,8 @@ export const handleKeyDown = (e) => {
   if (handledKeys.includes(e.code)) {
     e.preventDefault();
   }
+
+  
 };
 
 export const handleKeyUp = (e) => keysPressed.delete(e.code);
