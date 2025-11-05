@@ -697,36 +697,69 @@ export default function SpaceRenderer({
 
   return (
     <div>
-      <div 
-        ref={mountRef} 
+      <div
+        ref={mountRef}
         tabIndex={0}
-        className="w-full h-full relative"
-        style={{ height: '100vh', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      >
-      </div>
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center" style={{display: !sceneReady ? 'block' : 'none'}}> 
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4"></div>
-          <div className="text-white text-xl">Loading Assets...</div>
-          {/* Display loading progress */}
-          <div className="text-white text-sm mt-2">
-            Textures: {Object.keys(loadingProgress.textures).length > 0 ? 
-             `${Object.values(loadingProgress.textures).filter(status => status === 'loaded').length} / ${Object.keys(loadingProgress.textures).length}` : '0/0'}
-          </div>
-          <div className="text-white text-sm mt-2">
-            Citylights Textures: {Object.keys(loadingProgress.citylightsTextures).length > 0 ? 
-              `${Object.values(loadingProgress.citylightsTextures).filter(status => status === 'loaded').length} / ${Object.keys(loadingProgress.citylightsTextures).length}` : '0/0'}
-          </div>
-          <div className="text-white text-sm mt-2">
-            Clouds Textures: {Object.keys(loadingProgress.cloudsTextures).length > 0 ? 
-              `${Object.values(loadingProgress.cloudsTextures).filter(status => status === 'loaded').length} / ${Object.keys(loadingProgress.cloudsTextures).length}` : '0/0'}
-          </div>
-          <div className="text-white text-sm mt-2">
-            Models: {Object.keys(loadingProgress.models).length > 0 ? 
-              `${Object.values(loadingProgress.models).filter(progress => progress === 100).length} / ${Object.keys(loadingProgress.models).length}` : '0/0'}
+        className="w-full h-full absolute inset-0"
+        style={{ height: '100vh' }}
+      ></div>
+  
+      {/* Loader Overlay */}
+      {!sceneReady && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-900/80 backdrop-blur-md z-50">
+          <div className="p-8 rounded-2xl shadow-2xl bg-white/10 border border-white/20 text-center backdrop-blur-xl animate-fade-in">
+            <div className="relative flex items-center justify-center mb-6">
+              <div className="absolute w-20 h-20 rounded-full border-t-4 border-b-4 border-blue-500 animate-spin-slow"></div>
+              <div className="absolute w-12 h-12 rounded-full border-t-2 border-b-2 border-purple-400 animate-spin-slow-rev"></div>
+              <span className="text-white font-semibold text-lg tracking-wider z-10">IMBONI-1</span>
+            </div>
+  
+            <h2 className="text-blue-300 text-2xl font-semibold mb-2">
+              Preparing Universe
+            </h2>
+            <p className="text-gray-300 text-sm mb-4 italic">
+              Calibrating sensors and loading assets…
+            </p>
+  
+            <div className="space-y-2 text-sm text-gray-200">
+              <p>
+                Textures:{" "}
+                {Object.keys(loadingProgress.textures).length > 0
+                  ? `${Object.values(loadingProgress.textures).filter(
+                      (s) => s === "loaded"
+                    ).length} / ${Object.keys(loadingProgress.textures).length}`
+                  : "0/0"}
+              </p>
+              <p>
+                Citylights:{" "}
+                {Object.keys(loadingProgress.citylightsTextures).length > 0
+                  ? `${Object.values(
+                      loadingProgress.citylightsTextures
+                    ).filter((s) => s === "loaded").length} / ${
+                      Object.keys(loadingProgress.citylightsTextures).length
+                    }`
+                  : "0/0"}
+              </p>
+              <p>
+                Clouds:{" "}
+                {Object.keys(loadingProgress.cloudsTextures).length > 0
+                  ? `${Object.values(loadingProgress.cloudsTextures).filter(
+                      (s) => s === "loaded"
+                    ).length} / ${Object.keys(loadingProgress.cloudsTextures).length}`
+                  : "0/0"}
+              </p>
+              <p>
+                Models:{" "}
+                {Object.keys(loadingProgress.models).length > 0
+                  ? `${Object.values(loadingProgress.models).filter(
+                      (p) => p === 100
+                    ).length} / ${Object.keys(loadingProgress.models).length}`
+                  : "0/0"}
+              </p>
+            </div>
           </div>
         </div>
-       </div>
+      )}  
       {/* Add Landing HUD */}
       <LandingHUD 
         landingData={landingData}
