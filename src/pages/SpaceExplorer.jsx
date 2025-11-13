@@ -284,7 +284,7 @@ export default function SpaceExplorer() {
 
         {/* Navigation Map */}
         {showNavigationMap && (
-          <div className={`fixed inset-0 z-40 flex items-center justify-center transition-opacity duration-300 ${showNavigationMap ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <div className={`pointer-events-auto fixed inset-0 z-40 flex items-center justify-center transition-opacity duration-300 ${showNavigationMap ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             <div className="absolute inset-0 bg-black bg-opacity-50 backdrop-filter backdrop-blur-md"></div>
             <div className="relative z-50 w-full h-full p-4">
               <NavigationMap spacecraft={spacecraft} gameTime={gameTime} />

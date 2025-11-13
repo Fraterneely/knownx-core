@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { CELESTIAL_BODIES } from '../../entities/CelestialBodies';
 import { computeTrajectoryAU } from '../../utils/trajectory';
+import { AU_TO_METERS } from '../../utils/physicsUtils';
 
 // Visual tuning knobs
 const RENDER_MIN_PX = 0.5;
@@ -290,7 +291,7 @@ const NavigationMap = ({ spacecraft, gameTime }) => {
       const shipPosAU = { x: spacecraft.position.x, y: spacecraft.position.y, z: spacecraft.position.z };
       console.log(`Current ship position: ${shipPosAU.x}, ${shipPosAU.y}, ${shipPosAU.z}`);
       const shipVelAU = spacecraft.velocity 
-        ? { x: spacecraft.velocity.x, y: spacecraft.velocity.y, z: spacecraft.velocity.z } 
+        ? { x: spacecraft.velocity.x / AU_TO_METERS, y: spacecraft.velocity.y / AU_TO_METERS, z: spacecraft.velocity.z / AU_TO_METERS } 
         : { x: 0, y: 0, z: 0 };
       console.log(`Current ship velocity: ${shipVelAU.x}, ${shipVelAU.y}, ${shipVelAU.z}`);
 
