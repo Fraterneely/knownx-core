@@ -74,6 +74,10 @@ export default function SpaceRenderer({
   });
   const [sceneReady, setSceneReady] = useState(false);
   const [gameTime, setGameTime] = useState(0);
+
+  const timeScaleRef = useRef(timeScale);
+  useEffect(() => {timeScaleRef.current = timeScale; }, [timeScale]);
+  
   const [activeLightsReady, setLightsReady] = useState(false);
   const [thirdPersonCameraReady, setThirdPersonCameraReady] = useState(false);
   const landingSystemRef = useRef(null);
@@ -94,7 +98,6 @@ export default function SpaceRenderer({
   const ambientTrackRef = useRef(null);
   const cinematicTrackRef = useRef(null);
   const engineSoundRef = useRef(null);
-
 
   // Effect for initial scene setup (runs once mountRef is available)
   useEffect(() => {
@@ -425,20 +428,18 @@ export default function SpaceRenderer({
         composer.render();
         return;
       }
-
-      
   
       // Calculate delta only when not paused
       let realDelta = (currentTime - lastUpdateTime) / 1000;
       lastUpdateTime = currentTime;
       
-      const scaledDelta = realDelta * timeScale;
+      const scaledDelta = realDelta * timeScaleRef.current;
       setGameTime(prev => prev + scaledDelta);
   
       const stars = scene.getObjectByName("starfield");
   
       if (worldRef.current) {
-        worldRef.current.step(1/60, scaledDelta, 3);
+        worldRef.current.step(1/60 * timeScaleRef.current, scaledDelta, 3);
         
         if (spacecraftsRef.current) {
           spacecraftsRef.current.forEach((wrapper, name) => {
@@ -555,6 +556,7 @@ export default function SpaceRenderer({
             }
           }
   
+          /* Gravity Calculation and application */
           for (const bodyName in celestialBodiesRef.current) {
             const body = celestialBodiesRef.current[bodyName];
             if (shipBody && shipData && body.data) {
@@ -572,6 +574,11 @@ export default function SpaceRenderer({
           }
   
           const cannonAcceleration = totalForce.scale(1 / shipData.mass);
+          console.log(`Ship velocity in scaled time: ${Math.sqrt(
+            shipBody.velocity.x ** 2 +
+            shipBody.velocity.y ** 2 +
+            shipBody.velocity.z ** 2
+          )} AU/Sec`);
   
           ship.position.copy(shipBody.position);
           ship.quaternion.copy(shipBody.quaternion);
