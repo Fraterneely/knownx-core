@@ -42,6 +42,7 @@ export default function SpaceRenderer({
   setIsPaused,
   timeScale,
   showHUD,
+  setTimeScale,
   addLogEntry
 }) {
   const mountRef = useRef(null);
@@ -76,7 +77,7 @@ export default function SpaceRenderer({
   const [gameTime, setGameTime] = useState(0);
 
   const timeScaleRef = useRef(timeScale);
-  useEffect(() => {timeScaleRef.current = timeScale; }, [timeScale]);
+  useEffect(() => {timeScaleRef.current = timeScale;}, [timeScale]);
   
   const [activeLightsReady, setLightsReady] = useState(false);
   const [thirdPersonCameraReady, setThirdPersonCameraReady] = useState(false);
@@ -102,17 +103,39 @@ export default function SpaceRenderer({
   // Effect for initial scene setup (runs once mountRef is available)
   useEffect(() => {
     if (!mountRef.current) return;
-
+  
     const { scene, camera, renderer, composer, listener, audioLoader, sound } = setupScene(mountRef);
-    const {world, cannonDebugger, celestialBodiesMaterail, spacecraftsMaterial } = initCannonWorld(scene);
+    const { world, cannonDebugger, celestialBodiesMaterail, spacecraftsMaterial } = initCannonWorld(scene);
     const landingSystem = new LandingSystem(scene, camera, composer);
-
-    setupLighting(scene, activeLights, setLightsReady); 
+  
+    setupLighting(scene, activeLights, setLightsReady);
     setupStarfield(scene, textureLoader);
-    setupCelestialBodies(world, renderer, scene, camera, celestialBodiesMaterail, celestialBodiesRef, orbitRefs, atmosphereRefs, cloudsRefs, textureLoader, setLoadingProgress);
-    loadAllSpacecraftModels(world, scene, spacecraftsMaterial, spacecraftList, spacecraftsRef, selectedSpacecraftRef, setLoadingProgress);
-    // setupKeyboardControls(setShowOrbitalSelector);
-
+    setupCelestialBodies(
+      world,
+      renderer,
+      scene,
+      camera,
+      celestialBodiesMaterail,
+      celestialBodiesRef,
+      orbitRefs,
+      atmosphereRefs,
+      cloudsRefs,
+      textureLoader,
+      setLoadingProgress
+    );
+    loadAllSpacecraftModels(
+      world,
+      scene,
+      spacecraftsMaterial,
+      spacecraftList,
+      spacecraftsRef,
+      selectedSpacecraftRef,
+      setLoadingProgress
+    );
+  
+    const cleanupControls = setupKeyboardControls(timeScale, setTimeScale);
+  
+    // Refs
     sceneRef.current = scene;
     cameraRef.current = camera;
     rendererRef.current = renderer;
@@ -125,20 +148,20 @@ export default function SpaceRenderer({
     audioLoaderRef.current = audioLoader;
     soundRef.current = sound;
     landingSystemRef.current = landingSystem;
-
-    // Cleanup for initial setup
+  
     return () => {
+      cleanupControls();
       if (rendererRef.current) {
         rendererRef.current.dispose();
         if (rendererRef.current.domElement && mountRef.current?.contains(rendererRef.current.domElement)) {
           mountRef.current.removeChild(rendererRef.current.domElement);
         }
       }
-      if(worldRef.current){
+      if (worldRef.current) {
         worldRef.current = null;
       }
     };
-  }, []); // Runs once on mount
+  }, []);  
 
   // Effect to set sceneReady when all assets are loaded and refs are populated
   useEffect(() => {

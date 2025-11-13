@@ -4,11 +4,14 @@ export const keysPressed = new Set();
 
 export const handleKeyDown = (e) => {
   keysPressed.add(e.code);
+
   const handledKeys = [
     'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE',
     'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-    'KeyZ', 'KeyX', 'KeyO', 'KeyT'
+    'KeyZ', 'KeyX', 'KeyO', 'KeyT',
+    'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'
   ];
+
   if (handledKeys.includes(e.code)) {
     e.preventDefault();
   }
@@ -16,18 +19,44 @@ export const handleKeyDown = (e) => {
 
 export const handleKeyUp = (e) => keysPressed.delete(e.code);
 
-export function setupKeyboardControls(setShowOrbitalSelector) {
+export function setupKeyboardControls(timeScale, setTimeScale) {
   const handleKeyPress = (e) => {
     handleKeyDown(e);
-    if (e.code === 'KeyO') {
-      setShowOrbitalSelector(true);
+
+    switch (e.code) {
+      case 'Digit1':
+        timeScale = 0.1;
+        setTimeScale(timeScale);
+        break;
+      case 'Digit2':
+        timeScale = 1;
+        setTimeScale(timeScale);
+        break;
+      case 'Digit3':
+        timeScale = 10;
+        setTimeScale(timeScale);
+        break;
+      case 'Digit4':
+        timeScale = 100;
+        setTimeScale(timeScale);
+        break;
+      case 'Digit5':
+        timeScale = 1000;
+        setTimeScale(timeScale);
+        break;
+      default:
+        break;
     }
   };
 
+  // Attach event listeners
   window.addEventListener('keydown', handleKeyPress);
+  window.addEventListener('keyup', handleKeyUp);
 
+  // Cleanup on unmount
   return () => {
     window.removeEventListener('keydown', handleKeyPress);
+    window.removeEventListener('keyup', handleKeyUp);
   };
 }
 
